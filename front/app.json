@@ -1,0 +1,62 @@
+{
+  "expo": {
+    "name": "OMR Scanner",
+    "slug": "omr-scanner",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E40AF"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.omrscanner.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app requires camera access to scan answer sheets",
+        "NSPhotoLibraryUsageDescription": "This app requires photo library access to select answer sheet images"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1E40AF"
+      },
+      "package": "com.omrscanner.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow OMR Scanner to access your camera to scan answer sheets"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow OMR Scanner to access your photos to select answer sheets"
+        }
+      ],
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "scheme": "omrscanner"
+  }
+}
