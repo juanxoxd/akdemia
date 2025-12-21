@@ -1,13 +1,10 @@
-import {
-  Injectable,
-  Logger,
-  BadRequestException,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { S3Service } from '../infrastructure/storage/s3.service';
-import { RabbitMQService, ProcessStudentAnswerMessage } from '../infrastructure/queue/rabbitmq.service';
+import {
+  RabbitMQService,
+  ProcessStudentAnswerMessage,
+} from '../infrastructure/queue/rabbitmq.service';
 import {
   MINIO_CONSTANTS,
   PROCESSING_MESSAGES,
@@ -79,14 +76,11 @@ export class ProcessingService {
       });
 
       if (!response.ok) {
-        const errorData = await response.json() as { detail?: string };
-        throw new HttpException(
-          errorData.detail || 'Error procesando answer key',
-          response.status,
-        );
+        const errorData = (await response.json()) as { detail?: string };
+        throw new HttpException(errorData.detail || 'Error procesando answer key', response.status);
       }
 
-      const result = await response.json() as AnswerKeyProcessingResult;
+      const result = (await response.json()) as AnswerKeyProcessingResult;
 
       // 4. Validar confidence score (debe ser >95%)
       const minConfidence = PROCESSING_CONSTANTS.MIN_CONFIDENCE_SCORE;
@@ -106,7 +100,30 @@ export class ProcessingService {
         };
       }
 
-      // 5. Responder con preview para confirmación del docente
+      // 5. Log formatted answers for debugging
+      this.logger.log('═'.repeat(70));
+      this.logger.log(`ANSWER KEY PROCESADO - Examen: ${examId}`);
+      this.logger.log('═'.repeat(70));
+
+      // Format answers in groups of 10
+      const answersPerRow = 10;
+      for (let i = 0; i < result.detected_answers.length; i += answersPerRow) {
+        const rowAnswers = result.detected_answers.slice(i, i + answersPerRow);
+        const formatted = rowAnswers
+          .map(a => `${a.question_number}:${a.selected_option_label || '-'}`)
+          .join(' | ');
+        this.logger.log(formatted);
+      }
+
+      this.logger.log('═'.repeat(70));
+      this.logger.log(
+        `Total: ${result.detected_answers.length} respuestas | ` +
+          `Confidence: ${(result.confidence_score * 100).toFixed(1)}% | ` +
+          `Time: ${result.processing_time_ms}ms`,
+      );
+      this.logger.log('═'.repeat(70));
+
+      // 6. Responder con preview para confirmación del docente
       return {
         success: true,
         examId,
@@ -125,7 +142,7 @@ export class ProcessingService {
       };
     } catch (error) {
       this.logger.error(`Error procesando answer key: ${error}`);
-      
+
       if (error instanceof HttpException) {
         throw error;
       }

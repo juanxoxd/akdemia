@@ -64,6 +64,30 @@ MIN_QUESTIONS: Final[int] = 1
 MAX_QUESTIONS: Final[int] = 200
 
 # ============================================
+# Multi-Column Layout Configuration
+# (Para hojas como GIB D'Nivel con 3 columnas)
+# ============================================
+
+# Número de columnas en la hoja de respuestas
+DEFAULT_COLUMNS: Final[int] = 3
+
+# Preguntas por columna (90 preguntas / 3 columnas = 30)
+DEFAULT_ROWS_PER_COLUMN: Final[int] = 30
+
+# Configuración del layout GIB D'Nivel
+GIB_DNIVEL_CONFIG: Final[dict] = {
+    "columns": 3,
+    "rows_per_column": 30,
+    "total_questions": 90,
+    "options_per_question": 5,
+    # Porcentajes de la imagen para localizar el área de respuestas
+    "answer_area_top_percent": 0.35,      # El área empieza al 35% desde arriba
+    "answer_area_bottom_percent": 0.98,   # El área termina al 98%
+    "answer_area_left_percent": 0.50,     # El área de respuestas está en la mitad derecha
+    "answer_area_right_percent": 0.98,
+}
+
+# ============================================
 # Quality Thresholds
 # ============================================
 
