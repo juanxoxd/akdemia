@@ -134,12 +134,13 @@ async def debug_detection(
 ):
     """
     Debug endpoint: processes image and saves debug images to see what's being detected.
-    Returns paths to saved debug images.
+    Uses rectangle detection and perspective correction.
     """
     import cv2
     import numpy as np
     import os
     from datetime import datetime
+    from app.services.omr_processor import OMRProcessor
     
     logger.info("Debug detection started")
     
@@ -163,46 +164,44 @@ async def debug_detection(
     original_path = os.path.join(debug_dir, f"1_original_{timestamp}.jpg")
     cv2.imwrite(original_path, original)
     
-    # Crop to right side - CALIBRATION v8
-    x_start = int(w * 0.505)
-    x_end = int(w * 0.83)
-    y_start = int(h * 0.045)
-    y_end = int(h * 0.98)
-    cropped = original[y_start:y_end, x_start:x_end]
+    # Use OMRProcessor to detect rectangle and apply perspective
+    processor = OMRProcessor()
+    warped = processor._find_answer_region_smart(original)
     
-    cropped_path = os.path.join(debug_dir, f"2_cropped_{timestamp}.jpg")
-    cv2.imwrite(cropped_path, cropped)
+    warped_path = os.path.join(debug_dir, f"2_warped_{timestamp}.jpg")
+    cv2.imwrite(warped_path, warped)
     
     # Gray and threshold
-    gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     
     binary_path = os.path.join(debug_dir, f"3_binary_{timestamp}.jpg")
     cv2.imwrite(binary_path, binary)
     
-    # Draw grid overlay on cropped
-    ch, cw = cropped.shape[:2]
-    grid_overlay = cropped.copy()
+    # Draw grid overlay on warped image
+    ch, cw = warped.shape[:2]
+    grid_overlay = warped.copy()
     
     num_cols = 3
     rows_per_col = 30
     col_width = cw / num_cols
     row_height = ch / rows_per_col
     
-    # Draw column lines
-    for i in range(1, num_cols):
+    # Draw column lines (GREEN)
+    for i in range(num_cols + 1):
         x = int(i * col_width)
         cv2.line(grid_overlay, (x, 0), (x, ch), (0, 255, 0), 2)
     
-    # Draw row lines
-    for i in range(1, rows_per_col):
+    # Draw row lines (GREEN thin)
+    for i in range(rows_per_col + 1):
         y = int(i * row_height)
         cv2.line(grid_overlay, (0, y), (cw, y), (0, 255, 0), 1)
     
-    # Draw bubble positions - CALIBRATION v8
-    bubble_area_start = 0.14
-    bubble_area_end = 0.96
+    # CALIBRATION v17: With adaptive thresholding
+    bubble_area_start = 0.22  # Skip question number
+    bubble_area_end = 0.98    # Almost to column edge
     
+    # Draw bubble positions (BLUE circles)
     for q_num in range(1, total_questions + 1):
         col_idx = (q_num - 1) // rows_per_col
         row_idx = (q_num - 1) % rows_per_col
@@ -215,7 +214,12 @@ async def debug_detection(
         
         for opt_idx in range(options_per_question):
             x_center = int(bubble_start + (opt_idx + 0.5) * bubble_width)
-            cv2.circle(grid_overlay, (x_center, y_center), int(bubble_width * 0.3), (255, 0, 0), 1)
+            # Draw circle in BLUE
+            cv2.circle(grid_overlay, (x_center, y_center), int(bubble_width * 0.35), (255, 0, 0), 2)
+            # Label with A, B, C, D, E
+            label = chr(65 + opt_idx)  # A=65, B=66, etc.
+            cv2.putText(grid_overlay, label, (x_center - 5, y_center + 5), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 0, 255), 1)
     
     grid_path = os.path.join(debug_dir, f"4_grid_overlay_{timestamp}.jpg")
     cv2.imwrite(grid_path, grid_overlay)
@@ -223,21 +227,31 @@ async def debug_detection(
     logger.info(f"Debug images saved to: {debug_dir}")
     
     return {
-        "message": "Debug images saved",
+        "message": "Debug images saved with adaptive detection",
+        "detection_method": "rectangle_contour + adaptive_threshold",
         "debug_dir": debug_dir,
         "files": [
             original_path,
-            cropped_path,
+            warped_path,
             binary_path,
             grid_path,
         ],
-        "cropped_size": f"{cw}x{ch}",
+        "warped_size": f"{cw}x{ch}",
         "grid_config": {
             "num_cols": num_cols,
             "rows_per_col": rows_per_col,
-            "col_width": col_width,
-            "row_height": row_height,
-        }
+            "col_width": round(col_width, 2),
+            "row_height": round(row_height, 2),
+            "bubble_area_start": bubble_area_start,
+            "bubble_area_end": bubble_area_end,
+        },
+        "features": [
+            "Marker detection (template matching)",
+            "Rectangle contour detection",
+            "Perspective correction (warp)",
+            "Adaptive threshold per row",
+            "Global + local threshold calculation"
+        ]
     }
 
 
