@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { examApi } from '../../data/api';
 import { useExamStore } from '../../store';
@@ -13,21 +14,27 @@ export const useExams = () => {
     retry: 2,
   });
 
-  // Sync with store
-  if (examsQuery.data && !examsQuery.isLoading) {
-    setExams(examsQuery.data);
-    setLoadingExams(false);
-    setExamsError(null);
-  }
+  // Sync with store using useEffect to avoid infinite re-renders
+  useEffect(() => {
+    if (examsQuery.data && !examsQuery.isLoading) {
+      setExams(examsQuery.data);
+      setLoadingExams(false);
+      setExamsError(null);
+    }
+  }, [examsQuery.data, examsQuery.isLoading, setExams, setLoadingExams, setExamsError]);
 
-  if (examsQuery.isLoading) {
-    setLoadingExams(true);
-  }
+  useEffect(() => {
+    if (examsQuery.isLoading) {
+      setLoadingExams(true);
+    }
+  }, [examsQuery.isLoading, setLoadingExams]);
 
-  if (examsQuery.error) {
-    setExamsError((examsQuery.error as Error).message);
-    setLoadingExams(false);
-  }
+  useEffect(() => {
+    if (examsQuery.error) {
+      setExamsError((examsQuery.error as Error).message);
+      setLoadingExams(false);
+    }
+  }, [examsQuery.error, setExamsError, setLoadingExams]);
 
   return {
     exams: examsQuery.data || [],

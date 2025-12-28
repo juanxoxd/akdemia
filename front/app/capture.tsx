@@ -50,7 +50,7 @@ export default function CaptureScreen() {
     if (captureMode !== 'auto' || !detectionResult) return;
 
     const confidence = detectionResult.confidence;
-    
+
     if (confidence >= ENV.AUTO_CAPTURE_CONFIDENCE) {
       if (!stableTime) {
         setStableTime(Date.now());
@@ -73,7 +73,7 @@ export default function CaptureScreen() {
       // This is a simulation - in real implementation, 
       // use frame processor with document detection
       const mockConfidence = 0.5 + Math.random() * 0.5; // 50-100%
-      
+
       setDetectionResult({
         corners: mockConfidence > 0.5 ? {
           topLeft: { x: dimensions.width * 0.1, y: dimensions.height * 0.2 },
@@ -112,7 +112,7 @@ export default function CaptureScreen() {
   if (cameraPermission === 'denied') {
     return (
       <SafeAreaView className="flex-1 bg-black items-center justify-center p-6">
-        <Ionicons name="camera-off" size={64} color="#ef4444" />
+        <Ionicons name="videocam-off-outline" size={64} color="#ef4444" />
         <Text className="text-white text-xl font-semibold mt-6 text-center">
           Permiso de Cámara Denegado
         </Text>
@@ -146,12 +146,12 @@ export default function CaptureScreen() {
     );
   }
 
-  const canAutoCapture = 
-    detectionResult?.confidence !== undefined && 
+  const canAutoCapture =
+    detectionResult?.confidence !== undefined &&
     detectionResult.confidence >= ENV.AUTO_CAPTURE_CONFIDENCE;
 
   return (
-    <View 
+    <View
       className="flex-1 bg-black"
       onLayout={(e) => {
         const { width, height } = e.nativeEvent.layout;

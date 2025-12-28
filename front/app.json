@@ -31,7 +31,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -57,6 +58,14 @@
     "experiments": {
       "typedRoutes": true
     },
-    "scheme": "omrscanner"
+    "scheme": "omrscanner",
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "5545509b-de06-4d4e-88cc-a1132ee2797d"
+      }
+    }
   }
 }

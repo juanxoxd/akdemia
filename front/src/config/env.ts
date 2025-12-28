@@ -8,6 +8,8 @@ export const ENV = {
   // Feature Flags
   ENABLE_LOGS: process.env.EXPO_PUBLIC_ENABLE_LOGS === 'true' || __DEV__,
   MOCK_CAMERA: process.env.EXPO_PUBLIC_MOCK_CAMERA === 'true' || false,
+  // Use mock API when no backend is available (set to true by default in dev)
+  MOCK_API: process.env.EXPO_PUBLIC_MOCK_API !== 'false' && __DEV__,
   
   // Polling Configuration
   POLLING_INTERVAL: parseInt(process.env.EXPO_PUBLIC_POLLING_INTERVAL || '2000', 10),
