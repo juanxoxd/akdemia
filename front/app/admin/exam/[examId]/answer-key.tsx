@@ -14,11 +14,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { examApi, processingApi } from '../../../../src/data/api';
 import { useToast } from '../../../../src/presentation/components/common';
+import { useCaptureStore } from '../../../../src/store';
 
 export default function AnswerKeyScreen() {
     const { examId } = useLocalSearchParams<{ examId: string }>();
     const router = useRouter();
     const { showToast } = useToast();
+    const { capturedImage, resetCaptureState } = useCaptureStore();
 
     const [exam, setExam] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +46,14 @@ export default function AnswerKeyScreen() {
         }
     }, [examId]);
 
+    // Process captured image when returning from camera
+    useEffect(() => {
+        if (capturedImage?.uri) {
+            handleUpload(capturedImage.uri);
+            resetCaptureState();
+        }
+    }, [capturedImage]);
+
     const handlePickImage = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
@@ -61,20 +71,12 @@ export default function AnswerKeyScreen() {
         }
     };
 
-    const handleTakePhoto = async () => {
-        const permission = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permission.granted) {
-            Alert.alert('Permiso requerido', 'Necesitamos acceso a la cámara');
-            return;
-        }
-
-        const result = await ImagePicker.launchCameraAsync({
-            quality: 0.8,
-        });
-
-        if (!result.canceled && result.assets[0]) {
-            handleUpload(result.assets[0].uri);
-        }
+    // Navigate to capture screen with answer-key mode and green overlay
+    const handleTakePhoto = () => {
+        router.push({
+            pathname: '/capture',
+            params: { mode: 'answer-key', examId }
+        } as any);
     };
 
     const handleUpload = async (imageUri: string) => {
