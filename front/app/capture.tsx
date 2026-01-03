@@ -323,10 +323,22 @@ export default function CaptureScreen() {
     >
       <CameraView
         ref={cameraRef}
-        style={{ flex: 1 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         facing={cameraFacing}
         flash={flashEnabled ? 'on' : 'off'}
         onCameraReady={onCameraReady}
+      />
+
+      {/* Overlay container - FUERA del CameraView */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'box-none',
+        }}
       >
         {/* Header */}
         <SafeAreaView className="absolute top-0 left-0 right-0 flex-row justify-between items-center p-4 z-10">
@@ -379,7 +391,7 @@ export default function CaptureScreen() {
           onToggleFacing={toggleCameraFacing}
           onToggleMode={() => setCaptureMode(captureMode === 'auto' ? 'manual' : 'auto')}
         />
-      </CameraView>
+      </View>
     </View>
   );
 }
