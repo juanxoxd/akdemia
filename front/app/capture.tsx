@@ -70,17 +70,20 @@ export default function CaptureScreen() {
 
     // Simulate detection updates
     const interval = setInterval(() => {
-      // This is a simulation - in real implementation, 
+      // This is a simulation - in real implementation,
       // use frame processor with document detection
       const mockConfidence = 0.5 + Math.random() * 0.5; // 50-100%
 
       setDetectionResult({
-        corners: mockConfidence > 0.5 ? {
-          topLeft: { x: dimensions.width * 0.1, y: dimensions.height * 0.2 },
-          topRight: { x: dimensions.width * 0.9, y: dimensions.height * 0.2 },
-          bottomLeft: { x: dimensions.width * 0.1, y: dimensions.height * 0.8 },
-          bottomRight: { x: dimensions.width * 0.9, y: dimensions.height * 0.8 },
-        } : null,
+        corners:
+          mockConfidence > 0.5
+            ? {
+                topLeft: { x: dimensions.width * 0.1, y: dimensions.height * 0.2 },
+                topRight: { x: dimensions.width * 0.9, y: dimensions.height * 0.2 },
+                bottomLeft: { x: dimensions.width * 0.1, y: dimensions.height * 0.8 },
+                bottomRight: { x: dimensions.width * 0.9, y: dimensions.height * 0.8 },
+              }
+            : null,
         confidence: mockConfidence,
         isStable: mockConfidence > 0.85,
         timestamp: Date.now(),
@@ -126,12 +129,7 @@ export default function CaptureScreen() {
             variant="primary"
             fullWidth
           />
-          <Button
-            title="Volver"
-            onPress={handleClose}
-            variant="outline"
-            fullWidth
-          />
+          <Button title="Volver" onPress={handleClose} variant="outline" fullWidth />
         </View>
       </SafeAreaView>
     );
@@ -158,16 +156,31 @@ export default function CaptureScreen() {
         setDimensions({ width, height });
       }}
     >
-      {/* Camera view */}
+      {/* Camera view - SIN children para compatibilidad con expo-camera nueva */}
       <CameraView
         ref={cameraRef}
-        style={{ flex: 1 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         facing={cameraFacing}
         flash={flashEnabled ? 'on' : 'off'}
         onCameraReady={onCameraReady}
+      />
+
+      {/* Overlay container - FUERA del CameraView */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          pointerEvents: 'box-none',
+        }}
       >
         {/* Close button */}
-        <SafeAreaView className="absolute top-0 left-0 right-0 flex-row justify-between p-4">
+        <SafeAreaView
+          className="absolute top-0 left-0 right-0 flex-row justify-between p-4"
+          style={{ pointerEvents: 'box-none' }}
+        >
           <Button
             title=""
             icon={<Ionicons name="close" size={24} color="white" />}
@@ -204,7 +217,7 @@ export default function CaptureScreen() {
           onToggleFacing={toggleCameraFacing}
           onToggleMode={() => setCaptureMode(captureMode === 'auto' ? 'manual' : 'auto')}
         />
-      </CameraView>
+      </View>
     </View>
   );
 }

@@ -14,7 +14,7 @@ export const useExams = () => {
     retry: 2,
   });
 
-  // Sync with store using useEffect to avoid infinite re-renders
+  // Sync with store using useEffect to avoid infinite re-renders (React 19)
   useEffect(() => {
     if (examsQuery.data && !examsQuery.isLoading) {
       setExams(examsQuery.data);
