@@ -283,12 +283,16 @@ export class ProcessingService {
       status: ProcessingStatus.PROCESSING,
     });
 
-    // 5. Encolar mensaje en RabbitMQ para procesamiento ASÍNCRONO
+    // 5. Generar URL presignada para que el OMR service pueda descargar la imagen
+    // La URL presignada es válida por 1 hora (3600 segundos)
+    const presignedUrl = await this.s3Service.getPresignedUrl(key, 3600);
+
+    // 6. Encolar mensaje en RabbitMQ para procesamiento ASÍNCRONO
     const message: ProcessStudentAnswerMessage = {
       attemptId,
       examId,
       studentId,
-      imageUrl: uploadResult.url,
+      imageUrl: presignedUrl, // Usar URL presignada en lugar de URL pública
       answerKey,
       totalQuestions,
       optionsPerQuestion,
