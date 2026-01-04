@@ -59,11 +59,17 @@ COPY --from=builder --chown=nestjs:nodejs /app/apps/api-gateway/dist ./dist
 COPY --from=builder --chown=nestjs:nodejs /app/apps/api-gateway/package.json ./package.json.original
 
 # Modify package.json to remove workspace references and install with npm
-RUN cat package.json.original | sed 's/"@omr\/shared-types": "workspace:\*"/"@omr\/shared-types": "file:\.\/packages\/shared-types"/g' > package.json
+RUN cat package.json.original | \
+    sed 's/"@omr\/shared-types": "workspace:\*"/"@omr\/shared-types": "file:\.\/packages\/shared-types"/g' | \
+    sed 's/"@omr\/database": "workspace:\*"/"@omr\/database": "file:\.\/packages\/database"/g' > package.json
 
 # Copy shared-types as local package
 COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/dist ./packages/shared-types/dist
 COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.json ./packages/shared-types/
+
+# Copy database as local package
+COPY --from=builder --chown=nestjs:nodejs /app/packages/database/dist ./packages/database/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/database/package.json ./packages/database/
 
 # Install production dependencies with npm (no symlinks issues)
 RUN npm install --omit=dev --ignore-scripts
