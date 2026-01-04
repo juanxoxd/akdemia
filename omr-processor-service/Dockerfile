@@ -1,19 +1,8 @@
 # ==============================================
 # OMR Processor Service - Production Dockerfile
 # ==============================================
-#
-# Servicio independiente de procesamiento OMR
-# Tecnología: Python 3.11 + FastAPI + OpenCV
-#
-# Build:
-#   docker build -t omr-processor .
-#
-# Run local:
-#   docker run -p 8000:8000 --env-file .env omr-processor
-#
-# ==============================================
 
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Metadata
 LABEL maintainer="OMR Akdemia"
@@ -30,16 +19,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # ==============================================
 # Dependencies stage
 # ==============================================
-FROM base as dependencies
+FROM base AS dependencies
 
 # Install system dependencies for OpenCV and utilities
+# FIX: Reemplazado libgl1-mesa-glx por libgl1
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    # OpenCV dependencies
-    libgl1-mesa-glx \
+    # OpenCV dependencies modernas
+    libgl1 \
     libglib2.0-0 \
     libsm6 \
     libxext6 \
-    libxrender-dev \
+    libxrender1 \
     libgomp1 \
     # Health check utilities
     curl \
@@ -57,7 +47,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 # ==============================================
 # Runtime stage
 # ==============================================
-FROM dependencies as runtime
+FROM dependencies AS runtime
 
 # Copy application code
 COPY app ./app
