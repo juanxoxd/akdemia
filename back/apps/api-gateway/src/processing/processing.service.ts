@@ -97,8 +97,11 @@ export class ProcessingService {
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as { detail?: string };
-        throw new HttpException(errorData.detail || 'Error procesando answer key', response.status);
+        const errorData = (await response.json()) as { detail?: string | object; message?: string };
+        const errorDetail = typeof errorData.detail === 'object' 
+          ? errorData.detail 
+          : errorData.detail || errorData.message || 'Error procesando answer key';
+        throw new HttpException(errorDetail, response.status);
       }
 
       const result = (await response.json()) as AnswerKeyProcessingResult;
@@ -173,6 +176,14 @@ export class ProcessingService {
       }
       if (errorStack) {
         this.logger.error(`Stack trace: ${errorStack}`);
+      }
+
+      // Cleanup: Delete the uploaded file since processing failed
+      try {
+        await this.s3Service.deleteFile(key);
+        this.logger.log(`Archivo eliminado del bucket tras error: ${key}`);
+      } catch (deleteError) {
+        this.logger.warn(`No se pudo eliminar archivo tras error: ${key}`, deleteError);
       }
 
       if (error instanceof HttpException) {
