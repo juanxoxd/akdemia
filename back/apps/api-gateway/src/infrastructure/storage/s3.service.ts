@@ -37,7 +37,11 @@ export class S3Service implements OnModuleInit {
     this.bucket = this.configService.get<string>('minio.bucket') ?? MINIO_CONSTANTS.DEFAULT_BUCKET;
 
     const protocol = this.useSSL ? 'https' : 'http';
-    const endpointUrl = `${protocol}://${this.endpoint}:${this.port}`;
+    // No incluir puerto si es el default (80 para HTTP, 443 para HTTPS)
+    const isDefaultPort = (this.useSSL && this.port === 443) || (!this.useSSL && this.port === 80);
+    const endpointUrl = isDefaultPort 
+      ? `${protocol}://${this.endpoint}` 
+      : `${protocol}://${this.endpoint}:${this.port}`;
 
     this.client = new S3Client({
       endpoint: endpointUrl,
@@ -172,7 +176,9 @@ export class S3Service implements OnModuleInit {
 
   getFileUrl(key: string): string {
     const protocol = this.useSSL ? 'https' : 'http';
-    return `${protocol}://${this.endpoint}:${this.port}/${this.bucket}/${key}`;
+    const isDefaultPort = (this.useSSL && this.port === 443) || (!this.useSSL && this.port === 80);
+    const host = isDefaultPort ? this.endpoint : `${this.endpoint}:${this.port}`;
+    return `${protocol}://${host}/${this.bucket}/${key}`;
   }
 
   async listFiles(prefix?: string): Promise<string[]> {
