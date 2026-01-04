@@ -117,7 +117,30 @@ export class ResultsConsumer implements OnModuleInit {
           `✅ Procesamiento exitoso - Score: ${result.score}/${result.totalQuestions} (${result.percentage}%)`,
         );
 
-        // Actualizar ExamAttempt en PostgreSQL
+        // PASO 1: Guardar respuestas individuales PRIMERO (antes de marcar como completed)
+        if (result.answers && result.answers.length > 0) {
+          // Eliminar respuestas anteriores si existen (para reintentos)
+          await this.answerRepository.delete({ attemptId: result.attemptId });
+
+          // Crear todas las respuestas en un array
+          const answersToSave = result.answers.map(answerData => 
+            this.answerRepository.create({
+              attemptId: result.attemptId,
+              questionNumber: answerData.questionNumber,
+              selectedOption: answerData.selectedOption ?? undefined,
+              isCorrect: answerData.isCorrect,
+              confidenceScore: answerData.confidenceScore,
+              status: answerData.status as AnswerStatus,
+            })
+          );
+
+          // Batch insert - mucho más rápido que uno por uno
+          await this.answerRepository.save(answersToSave);
+
+          this.logger.log(`📝 ${result.answers.length} respuestas guardadas para attempt ${result.attemptId}`);
+        }
+
+        // PASO 2: Actualizar ExamAttempt a COMPLETED solo DESPUÉS de guardar todas las respuestas
         await this.attemptRepository.update(result.attemptId, {
           status: ProcessingStatus.COMPLETED,
           score: result.score,
@@ -128,27 +151,7 @@ export class ResultsConsumer implements OnModuleInit {
           processedAt: new Date(result.processedAt),
         });
 
-        this.logger.log(`📊 Attempt ${result.attemptId} actualizado con score=${result.score}`);
-
-        // Guardar respuestas individuales en Answer entities
-        if (result.answers && result.answers.length > 0) {
-          // Eliminar respuestas anteriores si existen (para reintentos)
-          await this.answerRepository.delete({ attemptId: result.attemptId });
-
-          for (const answerData of result.answers) {
-            const answer = this.answerRepository.create({
-              attemptId: result.attemptId,
-              questionNumber: answerData.questionNumber,
-              selectedOption: answerData.selectedOption ?? undefined,
-              isCorrect: answerData.isCorrect,
-              confidenceScore: answerData.confidenceScore,
-              status: answerData.status as AnswerStatus,
-            });
-            await this.answerRepository.save(answer);
-          }
-
-          this.logger.log(`📝 ${result.answers.length} respuestas guardadas para attempt ${result.attemptId}`);
-        }
+        this.logger.log(`📊 Attempt ${result.attemptId} actualizado con score=${result.score} - STATUS: COMPLETED`);
       } else {
         this.logger.error(
           `❌ Procesamiento fallido - Error: ${result.error?.code} - ${result.error?.message}`,
