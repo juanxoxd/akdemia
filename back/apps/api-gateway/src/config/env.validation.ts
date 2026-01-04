@@ -63,6 +63,31 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   MINIO_SECRET_KEY?: string;
+
+  // Database
+  @IsString()
+  @IsOptional()
+  DB_HOST?: string;
+
+  @IsNumber()
+  @IsOptional()
+  DB_PORT?: number;
+
+  @IsString()
+  @IsOptional()
+  DB_USERNAME?: string;
+
+  @IsString()
+  @IsOptional()
+  DB_PASSWORD?: string;
+
+  @IsString()
+  @IsOptional()
+  DB_DATABASE?: string;
+
+  @IsString()
+  @IsOptional()
+  DB_LOGGING?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

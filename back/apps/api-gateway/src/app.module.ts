@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { TerminusModule } from '@nestjs/terminus';
 import { HealthModule } from './health/health.module';
 import { ExamsModule } from './exams/exams.module';
@@ -9,6 +10,7 @@ import { S3Module } from './infrastructure/storage/s3.module';
 import { RabbitMQModule } from './infrastructure/queue/rabbitmq.module';
 import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
+import { Exam, Student, ExamAttempt, Answer, ProcessingLog } from '@omr/database';
 
 @Module({
   imports: [
@@ -16,6 +18,21 @@ import { validateEnv } from './config/env.validation';
       isGlobal: true,
       load: [configuration],
       validate: validateEnv,
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres' as const,
+        host: configService.get<string>('database.host'),
+        port: configService.get<number>('database.port'),
+        username: configService.get<string>('database.username'),
+        password: configService.get<string>('database.password'),
+        database: configService.get<string>('database.database'),
+        entities: [Exam, Student, ExamAttempt, Answer, ProcessingLog],
+        synchronize: configService.get<boolean>('database.synchronize'),
+        logging: configService.get<boolean>('database.logging'),
+      }),
+      inject: [ConfigService],
     }),
     TerminusModule,
     S3Module,

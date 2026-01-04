@@ -1,4 +1,4 @@
-import { SERVICE_PORTS, MINIO_CONSTANTS, REDIS_CONSTANTS } from '@omr/shared-types';
+import { SERVICE_PORTS, MINIO_CONSTANTS, REDIS_CONSTANTS, DATABASE_CONSTANTS } from '@omr/shared-types';
 
 export default () => ({
   // Server
@@ -39,5 +39,16 @@ export default () => ({
     accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
     secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
     bucket: process.env.MINIO_BUCKET || MINIO_CONSTANTS.DEFAULT_BUCKET,
+  },
+
+  // Database
+  database: {
+    host: process.env.DB_HOST || DATABASE_CONSTANTS.DEFAULT_HOST,
+    port: parseInt(process.env.DB_PORT || String(DATABASE_CONSTANTS.DEFAULT_PORT), 10),
+    username: process.env.DB_USERNAME || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+    database: process.env.DB_DATABASE || DATABASE_CONSTANTS.DEFAULT_DATABASE,
+    synchronize: process.env.NODE_ENV === 'development',
+    logging: process.env.DB_LOGGING === 'true',
   },
 });
