@@ -7,6 +7,7 @@ import io
 import cv2
 import numpy as np
 from PIL import Image
+import structlog
 
 from app.core.constants import (
     MIN_IMAGE_WIDTH,
@@ -19,6 +20,8 @@ from app.core.constants import (
     ErrorCode,
 )
 from app.schemas.processing import ImageValidationResult
+
+logger = structlog.get_logger()
 
 
 class ImageValidator:
@@ -42,12 +45,22 @@ class ImageValidator:
             pil_image = Image.open(io.BytesIO(image_data))
             width, height = pil_image.size
             image_format = pil_image.format or "UNKNOWN"
+            
+            logger.info(
+                "Validating image",
+                width=width,
+                height=height,
+                format=image_format,
+                size_bytes=len(image_data),
+                orientation="landscape" if width > height else "portrait",
+            )
 
             # Convert to OpenCV format for analysis
             np_array = np.frombuffer(image_data, np.uint8)
             cv_image = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
 
             if cv_image is None:
+                logger.error("Failed to decode image with OpenCV")
                 return ImageValidationResult(
                     is_valid=False,
                     width=0,
@@ -64,10 +77,29 @@ class ImageValidator:
 
             # Check dimensions
             if width < MIN_IMAGE_WIDTH or height < MIN_IMAGE_HEIGHT:
-                errors.append(
+                error_msg = (
                     f"{ErrorCode.IMAGE_TOO_SMALL}: Image too small "
                     f"({width}x{height}), minimum is {MIN_IMAGE_WIDTH}x{MIN_IMAGE_HEIGHT}"
                 )
+                errors.append(error_msg)
+                logger.warning(
+                    "Image dimensions too small",
+                    width=width,
+                    height=height,
+                    min_width=MIN_IMAGE_WIDTH,
+                    min_height=MIN_IMAGE_HEIGHT,
+                )
+                
+                # Check if image might be rotated (landscape instead of portrait)
+                if width > height and height < MIN_IMAGE_HEIGHT:
+                    warnings.append(
+                        f"Image appears to be in landscape orientation ({width}x{height}). "
+                        "OMR sheets are typically portrait. Consider rotating the image 90 degrees."
+                    )
+                    logger.info(
+                        "Possible orientation issue detected",
+                        suggestion="Image may need to be rotated 90 degrees",
+                    )
 
             if width > MAX_IMAGE_WIDTH or height > MAX_IMAGE_HEIGHT:
                 errors.append(
@@ -89,11 +121,25 @@ class ImageValidator:
 
             # Classify quality level
             quality_level = self._classify_quality(quality_score)
+            
+            logger.info(
+                "Quality metrics calculated",
+                blur_score=round(blur_score, 4),
+                contrast_score=round(contrast_score, 4),
+                brightness_score=round(brightness_score, 4),
+                quality_score=round(quality_score, 4),
+                quality_level=quality_level,
+            )
 
             if quality_score < MIN_QUALITY_SCORE:
                 errors.append(
                     f"{ErrorCode.LOW_QUALITY}: Image quality too low "
                     f"({quality_score:.2f}), minimum is {MIN_QUALITY_SCORE}"
+                )
+                logger.warning(
+                    "Image quality below threshold",
+                    quality_score=round(quality_score, 4),
+                    min_required=MIN_QUALITY_SCORE,
                 )
 
             # Add warnings for borderline metrics
@@ -107,6 +153,14 @@ class ImageValidator:
                 warnings.append("Brightness level is not optimal")
 
             is_valid = len(errors) == 0
+            
+            logger.info(
+                "Image validation completed",
+                is_valid=is_valid,
+                errors_count=len(errors),
+                warnings_count=len(warnings),
+                errors=errors if errors else None,
+            )
 
             return ImageValidationResult(
                 is_valid=is_valid,

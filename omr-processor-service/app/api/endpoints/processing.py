@@ -52,12 +52,24 @@ async def process_answer_key(
         validation = validator.validate(image_data)
 
         if not validation.is_valid:
+            logger.warning(
+                "Image validation failed",
+                exam_id=exam_id,
+                filename=file.filename,
+                width=validation.width,
+                height=validation.height,
+                errors=validation.errors,
+                warnings=validation.warnings,
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={
                     "code": "VALIDATION_ERROR",
                     "message": "Image validation failed",
                     "errors": validation.errors,
+                    "warnings": validation.warnings,
+                    "dimensions": f"{validation.width}x{validation.height}",
+                    "hint": "OMR sheets should be portrait orientation with minimum 800x1000 pixels",
                 },
             )
 
