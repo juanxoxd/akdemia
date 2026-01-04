@@ -128,7 +128,7 @@ class ProcessingConsumer:
     
     async def process_student_answer(self, data: dict) -> dict:
         """
-        Procesar respuesta de estudiante
+        Procesar respuesta de estudiante usando el OMRProcessor real
         
         Args:
             data: Mensaje con imageUrl, answerKey, etc.
@@ -141,65 +141,89 @@ class ProcessingConsumer:
         student_id = data.get("studentId")
         image_url = data.get("imageUrl")
         answer_key = data.get("answerKey", [])
-        total_questions = data.get("totalQuestions", 50)
+        total_questions = data.get("totalQuestions", 100)
         options_per_question = data.get("optionsPerQuestion", 5)
         
         try:
-            # TODO: Descargar imagen de MinIO
-            # minio_client = Minio(...)
-            # image_data = minio_client.get_object(bucket, key)
-            
-            # Por ahora, simulamos el procesamiento
             logger.info(
-                "Procesando imagen",
+                "Procesando imagen con OMR real",
                 attempt_id=attempt_id,
                 image_url=image_url,
                 total_questions=total_questions
             )
             
-            # Simular procesamiento (TODO: reemplazar con procesamiento real)
-            # En producción:
-            # 1. Descargar imagen de MinIO
-            # 2. Validar calidad de imagen
-            # 3. Preprocesar con OpenCV
-            # 4. Detectar burbujas marcadas
-            # 5. Comparar con answer_key
+            # 1. Descargar imagen desde la URL (MinIO/S3)
+            import httpx
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(image_url)
+                response.raise_for_status()
+                image_data = response.content
             
-            # Simular respuestas detectadas
+            logger.info(
+                "Imagen descargada",
+                attempt_id=attempt_id,
+                size_bytes=len(image_data)
+            )
+            
+            # 2. Procesar imagen con OMRProcessor
+            omr_result = self.omr_processor.process_image(
+                image_data=image_data,
+                total_questions=total_questions,
+                options_per_question=options_per_question
+            )
+            
+            # 3. Comparar con answer_key y calcular score
             detected_answers = []
             correct_count = 0
             incorrect_count = 0
             blank_count = 0
             
-            import random
-            for q in range(1, total_questions + 1):
-                # Simular detección (en producción usar OMRProcessor)
-                selected = random.randint(0, options_per_question - 1) if random.random() > 0.1 else None
-                correct = answer_key[q - 1][0] if q <= len(answer_key) else 0
+            for answer in omr_result.answers:
+                q_num = answer.question_number
+                selected = answer.selected_option
                 
-                is_correct = selected == correct if selected is not None else False
+                # Obtener respuesta correcta del answer_key
+                # answer_key es una lista de listas: [[0], [3], [4], ...]
+                # donde cada sublista contiene la opción correcta (0-indexed)
+                correct = None
+                if q_num <= len(answer_key) and answer_key[q_num - 1]:
+                    correct = answer_key[q_num - 1][0] if isinstance(answer_key[q_num - 1], list) else answer_key[q_num - 1]
                 
-                if selected is None:
+                # Determinar si es correcto
+                is_correct = False
+                if selected is not None and correct is not None:
+                    is_correct = selected == correct
+                
+                # Contabilizar
+                if answer.status == AnswerStatus.BLANK or selected is None:
                     blank_count += 1
-                    status = AnswerStatus.BLANK.value
                 elif is_correct:
                     correct_count += 1
-                    status = AnswerStatus.DETECTED.value
                 else:
                     incorrect_count += 1
-                    status = AnswerStatus.DETECTED.value
                 
                 detected_answers.append({
-                    "questionNumber": q,
+                    "questionNumber": q_num,
                     "selectedOption": selected,
                     "correctOption": correct,
                     "isCorrect": is_correct,
-                    "status": status,
-                    "confidenceScore": random.uniform(0.85, 0.99)
+                    "status": answer.status.value if hasattr(answer.status, 'value') else str(answer.status),
+                    "confidenceScore": answer.confidence_score
                 })
             
             score = correct_count
-            percentage = round((correct_count / total_questions) * 100, 2)
+            percentage = round((correct_count / total_questions) * 100, 2) if total_questions > 0 else 0
+            
+            logger.info(
+                "Procesamiento completado",
+                attempt_id=attempt_id,
+                score=score,
+                total_questions=total_questions,
+                correct=correct_count,
+                incorrect=incorrect_count,
+                blank=blank_count,
+                confidence=omr_result.confidence_score
+            )
             
             return {
                 "attemptId": attempt_id,
@@ -212,7 +236,7 @@ class ProcessingConsumer:
                 "totalBlank": blank_count,
                 "totalQuestions": total_questions,
                 "percentage": percentage,
-                "confidenceScore": 0.95,
+                "confidenceScore": omr_result.confidence_score,
                 "answers": detected_answers,
                 "processedAt": self._get_timestamp()
             }
