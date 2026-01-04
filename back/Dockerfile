@@ -67,9 +67,12 @@ RUN cat package.json.original | \
 COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/dist ./packages/shared-types/dist
 COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.json ./packages/shared-types/
 
-# Copy database as local package
+# Copy database package.json and fix workspace references
 COPY --from=builder --chown=nestjs:nodejs /app/packages/database/dist ./packages/database/dist
-COPY --from=builder --chown=nestjs:nodejs /app/packages/database/package.json ./packages/database/
+COPY --from=builder --chown=nestjs:nodejs /app/packages/database/package.json ./packages/database/package.json.original
+RUN cat packages/database/package.json.original | \
+    sed 's/"@omr\/shared-types": "workspace:\*"/"@omr\/shared-types": "file:..\/shared-types"/g' > packages/database/package.json && \
+    rm packages/database/package.json.original
 
 # Install production dependencies with npm (no symlinks issues)
 RUN npm install --omit=dev --ignore-scripts
