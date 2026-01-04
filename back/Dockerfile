@@ -1,5 +1,5 @@
 # ==============================================
-# API Gateway - Production Dockerfile (FIXED)
+# API Gateway - Production Dockerfile
 # ==============================================
 
 FROM node:20-alpine AS base
@@ -13,13 +13,12 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
 
 # ==============================================
-# Dependencies stage
+# Dependencies stage - Install all deps for build
 # ==============================================
 FROM base AS dependencies
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY tsconfig.base.json ./
-
 COPY apps/api-gateway/package.json ./apps/api-gateway/
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/database/package.json* ./packages/database/
@@ -44,20 +43,7 @@ RUN mkdir -p packages/database/dist
 RUN pnpm --filter @omr/api-gateway build
 
 # ==============================================
-# Production dependencies stage
-# ==============================================
-FROM base AS prod-deps
-
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/api-gateway/package.json ./apps/api-gateway/
-COPY packages/shared-types/package.json ./packages/shared-types/
-COPY packages/database/package.json* ./packages/database/
-
-# Install only production dependencies
-RUN pnpm install --frozen-lockfile --prod
-
-# ==============================================
-# Production stage
+# Production stage - Use NPM for clean install
 # ==============================================
 FROM node:20-alpine AS runner
 
@@ -66,18 +52,21 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nestjs
 
-# Copy built application
+# Copy built dist
 COPY --from=builder --chown=nestjs:nodejs /app/apps/api-gateway/dist ./dist
-COPY --from=builder --chown=nestjs:nodejs /app/apps/api-gateway/package.json ./package.json
 
-# Copy shared packages dist
-COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/dist ./node_modules/@omr/shared-types/dist
-COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.json ./node_modules/@omr/shared-types/
-COPY --from=builder --chown=nestjs:nodejs /app/packages/database/dist ./node_modules/@omr/database/dist
-COPY --from=builder --chown=nestjs:nodejs /app/packages/database/package.json ./node_modules/@omr/database/
+# Copy package.json and create a standalone version without workspace refs
+COPY --from=builder --chown=nestjs:nodejs /app/apps/api-gateway/package.json ./package.json.original
 
-# Copy production node_modules (this includes @nestjs/core, etc.)
-COPY --from=prod-deps --chown=nestjs:nodejs /app/node_modules ./node_modules
+# Modify package.json to remove workspace references and install with npm
+RUN cat package.json.original | sed 's/"@omr\/shared-types": "workspace:\*"/"@omr\/shared-types": "file:\.\/packages\/shared-types"/g' > package.json
+
+# Copy shared-types as local package
+COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/dist ./packages/shared-types/dist
+COPY --from=builder --chown=nestjs:nodejs /app/packages/shared-types/package.json ./packages/shared-types/
+
+# Install production dependencies with npm (no symlinks issues)
+RUN npm install --omit=dev --ignore-scripts
 
 USER nestjs
 
