@@ -75,7 +75,8 @@ RUN cat packages/database/package.json.original | \
     rm packages/database/package.json.original
 
 # Install production dependencies with npm (no symlinks issues)
-RUN npm install --omit=dev --ignore-scripts
+# Use --legacy-peer-deps to bypass peer dependency conflicts already resolved by pnpm
+RUN npm install --omit=dev --ignore-scripts --legacy-peer-deps
 
 USER nestjs
 
