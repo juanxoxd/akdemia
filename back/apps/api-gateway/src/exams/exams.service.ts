@@ -1,12 +1,12 @@
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Exam, ExamAttempt } from '@omr/database';
+import { Exam, ExamAttempt, Answer } from '@omr/database';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { UpdateExamDto } from './dto/update-exam.dto';
 import { ExamResponseDto } from './dto/exam-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
-import { HTTP_MESSAGES, ExamStatus } from '@omr/shared-types';
+import { HTTP_MESSAGES, ExamStatus, ProcessingStatus } from '@omr/shared-types';
 
 @Injectable()
 export class ExamsService {
@@ -17,6 +17,8 @@ export class ExamsService {
     private readonly examRepository: Repository<Exam>,
     @InjectRepository(ExamAttempt)
     private readonly attemptRepository: Repository<ExamAttempt>,
+    @InjectRepository(Answer)
+    private readonly answerRepository: Repository<Answer>,
   ) {}
 
   async create(createExamDto: CreateExamDto): Promise<ExamResponseDto> {
@@ -153,6 +155,9 @@ export class ExamsService {
       : 0;
     const standardDeviation = Math.sqrt(variance);
 
+    // Calculate per-question statistics
+    const questionStatistics = await this.calculateQuestionStatistics(id, exam.totalQuestions);
+
     return {
       examId: id,
       totalStudents,
@@ -162,8 +167,60 @@ export class ExamsService {
       lowestScore,
       medianScore: Math.round(medianScore * 100) / 100,
       standardDeviation: Math.round(standardDeviation * 100) / 100,
-      questionStatistics: [], // TODO: Calculate per-question stats from Answer entities
+      questionStatistics,
     };
+  }
+
+  /**
+   * Calculate per-question statistics
+   */
+  private async calculateQuestionStatistics(examId: string, totalQuestions: number) {
+    // Get all attempts for this exam that are completed
+    const completedAttempts = await this.attemptRepository.find({
+      where: { examId, status: ProcessingStatus.COMPLETED },
+      select: ['id'],
+    });
+
+    if (completedAttempts.length === 0) {
+      return [];
+    }
+
+    const attemptIds = completedAttempts.map(a => a.id);
+
+    // Get all answers for completed attempts grouped by question
+    const questionStats = [];
+
+    for (let qNum = 1; qNum <= totalQuestions; qNum++) {
+      const answers = await this.answerRepository
+        .createQueryBuilder('answer')
+        .where('answer.attemptId IN (:...attemptIds)', { attemptIds })
+        .andWhere('answer.questionNumber = :qNum', { qNum })
+        .getMany();
+
+      const totalAnswers = answers.length;
+      const correctAnswers = answers.filter(a => a.isCorrect).length;
+      const blankAnswers = answers.filter(a => a.selectedOption === null).length;
+
+      // Calculate option distribution
+      const optionCounts: Record<number, number> = {};
+      answers.forEach(a => {
+        if (a.selectedOption !== null && a.selectedOption !== undefined) {
+          optionCounts[a.selectedOption] = (optionCounts[a.selectedOption] || 0) + 1;
+        }
+      });
+
+      questionStats.push({
+        questionNumber: qNum,
+        totalAnswers,
+        correctAnswers,
+        incorrectAnswers: totalAnswers - correctAnswers - blankAnswers,
+        blankAnswers,
+        correctPercentage: totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0,
+        optionDistribution: optionCounts,
+      });
+    }
+
+    return questionStats;
   }
 
   async updateAnswerKey(id: string, answerKey: { answers: Array<{ questionNumber: number; correctOption: number; confidenceScore: number }> }, imageUrl?: string, confidence?: number): Promise<ExamResponseDto> {
