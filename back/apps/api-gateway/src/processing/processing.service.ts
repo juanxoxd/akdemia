@@ -87,7 +87,11 @@ export class ProcessingService {
       formData.append('total_questions', totalQuestions.toString());
       formData.append('options_per_question', optionsPerQuestion.toString());
 
-      const response = await fetch(`${this.omrProcessorUrl}/api/processing/answer-key`, {
+      const url = `${this.omrProcessorUrl}/api/processing/answer-key`;
+      this.logger.log(`Llamando a OMR Service: ${url}`);
+      this.logger.log(`OMR_PROCESSOR_URL configurada: ${this.omrProcessorUrl}`);
+
+      const response = await fetch(url, {
         method: 'POST',
         body: formData,
       });
@@ -158,14 +162,25 @@ export class ProcessingService {
         answerMatrix: result.detected_answers.map(a => a.selected_option),
       };
     } catch (error) {
-      this.logger.error(`Error procesando answer key: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+      const errorCause = error instanceof Error && 'cause' in error ? String(error.cause) : '';
+      
+      this.logger.error(`Error procesando answer key: ${errorMessage}`);
+      this.logger.error(`URL intentada: ${this.omrProcessorUrl}/api/processing/answer-key`);
+      if (errorCause) {
+        this.logger.error(`Causa del error: ${errorCause}`);
+      }
+      if (errorStack) {
+        this.logger.error(`Stack trace: ${errorStack}`);
+      }
 
       if (error instanceof HttpException) {
         throw error;
       }
 
       throw new HttpException(
-        'No se pudo conectar con el servicio de procesamiento OMR',
+        `No se pudo conectar con el servicio de procesamiento OMR. URL: ${this.omrProcessorUrl}. Error: ${errorMessage}`,
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
