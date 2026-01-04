@@ -36,33 +36,34 @@ omr-akdemia/
 
 #### 5. OMR Processor (Git)
 
-| Campo | Valor |
-|-------|-------|
-| Build Path | `omr-processor-service` |
+| Campo      | Valor                              |
+| ---------- | ---------------------------------- |
+| Build Path | `omr-processor-service`            |
 | Dockerfile | `omr-processor-service/Dockerfile` |
-| Puerto | `8000` |
+| Puerto     | `8000`                             |
 
 #### 6. API Gateway (Git)
 
-| Campo | Valor |
-|-------|-------|
-| Build Path | `back` |
+| Campo      | Valor                     |
+| ---------- | ------------------------- |
+| Build Path | `back`                    |
 | Dockerfile | `back/Dockerfile.gateway` |
-| Puerto | `3000` |
+| Puerto     | `3000`                    |
 
 #### 7. Frontend (Git)
 
-| Campo | Valor |
-|-------|-------|
-| Build Path | `front` |
+| Campo      | Valor              |
+| ---------- | ------------------ |
+| Build Path | `front`            |
 | Dockerfile | `front/Dockerfile` |
-| Puerto | `8081` |
+| Puerto     | `8081`             |
 
 ---
 
 ## ⚙️ Variables de Entorno
 
 ### OMR Processor
+
 ```env
 MINIO_ENDPOINT=omr-minio
 MINIO_SECRET_KEY=<password>
@@ -70,17 +71,20 @@ RABBITMQ_URL=amqp://guest:<password>@omr-rabbitmq:5672/
 ```
 
 ### API Gateway
+
 ```env
 DB_HOST=omr-postgres
 DB_PASSWORD=<password>
 REDIS_HOST=omr-redis
 OMR_PROCESSOR_URL=http://omr-processor:8000
-CORS_ORIGIN=https://your-domain.com
+CORS_ORIGIN=https://api-akdmia.scairpgroup.com
 ```
 
 ### Frontend
+
 ```env
-EXPO_PUBLIC_API_BASE_URL=https://api.your-domain.com/api
+# Producción
+EXPO_PUBLIC_API_BASE_URL=https://api-akdmia.scairpgroup.com/api
 ```
 
 > **Ver archivos `.env.example` en cada carpeta para la lista completa**
@@ -91,9 +95,7 @@ EXPO_PUBLIC_API_BASE_URL=https://api.your-domain.com/api
 
 ```bash
 # Health checks
-curl https://api.your-domain.com/api/health  # API Gateway
-curl https://omr.your-domain.com/health      # OMR Processor
-curl https://app.your-domain.com/            # Frontend
+curl https://api-akdmia.scairpgroup.com/api/health  # API Gateway
 
 # MinIO: crear bucket 'omr-images'
 # Acceder a https://your-domain:9001
@@ -130,31 +132,31 @@ docker build -t omr-frontend .
 
 ## 🔗 Enlaces Útiles
 
-| Servicio | URL Local | Producción |
-|----------|-----------|------------|
-| Frontend | http://localhost:8081 | https://app.your-domain.com |
-| API Gateway | http://localhost:3000 | https://api.your-domain.com |
-| API Docs | http://localhost:3000/api/docs | (Solo dev) |
-| OMR Processor | http://localhost:8000 | https://omr.your-domain.com |
-| OMR Docs | http://localhost:8000/docs | (Solo dev) |
-| MinIO Console | http://localhost:9001 | https://minio.your-domain.com |
-| RabbitMQ Admin | http://localhost:15672 | https://rabbit.your-domain.com |
+| Servicio       | URL Local                      | Producción                             |
+| -------------- | ------------------------------ | -------------------------------------- |
+| API Gateway    | http://localhost:3000          | https://api-akdmia.scairpgroup.com     |
+| API Endpoints  | http://localhost:3000/api      | https://api-akdmia.scairpgroup.com/api |
+| API Docs       | http://localhost:3000/api/docs | (Solo dev)                             |
+| OMR Processor  | http://localhost:8000          | (Servicio interno)                     |
+| OMR Docs       | http://localhost:8000/docs     | (Solo dev)                             |
+| MinIO Console  | http://localhost:9001          | (Interno)                              |
+| RabbitMQ Admin | http://localhost:15672         | (Interno)                              |
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
-| Componente | Tecnología |
-|------------|------------|
-| Frontend | React Native + Expo |
-| API Gateway | NestJS + TypeScript |
-| OMR Processing | Python + FastAPI + OpenCV |
-| Base de Datos | PostgreSQL 15 |
-| Cache | Redis 7 |
-| Queue | RabbitMQ 3 |
-| Storage | MinIO (S3-compatible) |
-| Containerización | Docker |
-| Deploy | Dokploy |
+| Componente       | Tecnología                |
+| ---------------- | ------------------------- |
+| Frontend         | React Native + Expo       |
+| API Gateway      | NestJS + TypeScript       |
+| OMR Processing   | Python + FastAPI + OpenCV |
+| Base de Datos    | PostgreSQL 15             |
+| Cache            | Redis 7                   |
+| Queue            | RabbitMQ 3                |
+| Storage          | MinIO (S3-compatible)     |
+| Containerización | Docker                    |
+| Deploy           | Dokploy                   |
 
 ---
 
@@ -181,13 +183,13 @@ docker build --no-cache -t <image-name> .
 
 ## 🐛 Problemas Comunes
 
-| Error | Solución |
-|-------|----------|
-| Cannot connect to database | Verificar `DB_HOST` y `DB_PASSWORD` |
-| MinIO bucket not found | Crear bucket `omr-images` en console |
-| CORS error | Configurar `CORS_ORIGIN` en API Gateway |
-| Build fails | Verificar `Build Path` y `Dockerfile Path` |
-| Services can't communicate | Verificar que estén en la misma red |
+| Error                      | Solución                                   |
+| -------------------------- | ------------------------------------------ |
+| Cannot connect to database | Verificar `DB_HOST` y `DB_PASSWORD`        |
+| MinIO bucket not found     | Crear bucket `omr-images` en console       |
+| CORS error                 | Configurar `CORS_ORIGIN` en API Gateway    |
+| Build fails                | Verificar `Build Path` y `Dockerfile Path` |
+| Services can't communicate | Verificar que estén en la misma red        |
 
 **Ver [`DEPLOY.md`](./DEPLOY.md#troubleshooting) para troubleshooting detallado**
 
