@@ -29,7 +29,7 @@ import { Exam, Student, ExamAttempt, Answer, ProcessingLog } from '@omr/database
         password: configService.get<string>('database.password'),
         database: configService.get<string>('database.database'),
         entities: [Exam, Student, ExamAttempt, Answer, ProcessingLog],
-        synchronize: configService.get<boolean>('database.synchronize'),
+        synchronize: true,
         logging: configService.get<boolean>('database.logging'),
       }),
       inject: [ConfigService],
