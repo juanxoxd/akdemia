@@ -27,19 +27,23 @@ const queryClient = new QueryClient({
 // Header with hamburger menu
 const HeaderLeft = ({ onMenuPress }: { onMenuPress: () => void }) => (
   <TouchableOpacity
-    onPress={onMenuPress}
+    onPress={() => {
+      console.log('[Drawer] Menu button pressed');
+      onMenuPress();
+    }}
     style={{
       marginLeft: 8,
       padding: 8,
       borderRadius: 8,
     }}
+    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
   >
     <Ionicons name="menu" size={24} color="#ffffff" />
   </TouchableOpacity>
 );
 
 // Mock indicator badge
-const MockBadge = () => (
+const MockBadge = () =>
   ENV.MOCK_API ? (
     <View
       style={{
@@ -52,8 +56,7 @@ const MockBadge = () => (
     >
       <Text style={{ fontSize: 10, fontWeight: 'bold', color: '#000' }}>MOCK</Text>
     </View>
-  ) : null
-);
+  ) : null;
 
 export default function RootLayout() {
   const drawer = useDrawer();
@@ -61,11 +64,16 @@ export default function RootLayout() {
   useEffect(() => {
     // Hide splash screen after app is ready
     const hideSplash = async () => {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       await SplashScreen.hideAsync();
     };
     hideSplash();
   }, []);
+
+  const handleOpenDrawer = React.useCallback(() => {
+    console.log('[Layout] Opening drawer');
+    drawer.open();
+  }, [drawer]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -83,7 +91,19 @@ export default function RootLayout() {
                 fontWeight: 'bold',
               },
               animation: 'slide_from_right',
-              headerLeft: () => <HeaderLeft onMenuPress={drawer.open} />,
+              headerLeft: () => (
+                <TouchableOpacity
+                  onPress={handleOpenDrawer}
+                  style={{
+                    marginLeft: 8,
+                    padding: 8,
+                    borderRadius: 8,
+                  }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="menu" size={24} color="#ffffff" />
+                </TouchableOpacity>
+              ),
               headerRight: () => <MockBadge />,
             }}
           >
@@ -149,10 +169,21 @@ export default function RootLayout() {
                 title: 'Mis Resultados',
               }}
             />
+            <Stack.Screen
+              name="admin/exam/[examId]/students"
+              options={{
+                title: 'Estudiantes',
+              }}
+            />
+            <Stack.Screen
+              name="admin/exam/[examId]/answer-key"
+              options={{
+                title: 'Clave de Respuestas',
+              }}
+            />
           </Stack>
         </ToastProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
   );
 }
-
