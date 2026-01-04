@@ -1,9 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsInt, IsOptional, Min, Max, IsArray } from 'class-validator';
+import { IsInt, IsOptional, Min, Max, IsArray, Allow } from 'class-validator';
 import { PROCESSING_CONSTANTS } from '@omr/shared-types';
 
 export class UploadAnswerKeyDto {
+  // Allow 'file' property to pass validation - it's handled by FileInterceptor
+  @Allow()
+  file?: any;
+
   @ApiProperty({
     description: 'Total number of questions',
     example: 50,
@@ -41,6 +45,10 @@ export class ConfirmAnswerKeyDto {
 }
 
 export class SubmitStudentAnswerDto {
+  // Allow 'file' property to pass validation - it's handled by FileInterceptor
+  @Allow()
+  file?: any;
+
   @ApiProperty({
     description: 'Total number of questions',
     example: 50,
