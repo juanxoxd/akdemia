@@ -86,7 +86,8 @@ export const useProcessing = () => {
 
         setExamAttempt(result);
 
-        if (result.status === 'COMPLETED' || result.status === 'FAILED' || result.status === 'PENDING_REVIEW') {
+        // Status values are lowercase from the API: 'completed', 'failed', 'needs_review', 'processing', 'pending'
+        if (result.status === 'completed' || result.status === 'failed' || result.status === 'needs_review') {
           stopPolling();
           return;
         }
