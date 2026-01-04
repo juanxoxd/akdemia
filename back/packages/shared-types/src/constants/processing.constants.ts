@@ -28,7 +28,7 @@ export const PROCESSING_CONSTANTS = {
 
   // Quality validation
   MIN_QUALITY_SCORE: 0.7,
-  MIN_CONFIDENCE_SCORE: 0.95, // 95% minimum for answer key
+  MIN_CONFIDENCE_SCORE: 0.85, // 85% minimum for answer key (tolerant to phone photos)
   BLUR_THRESHOLD: 100,
   NOISE_THRESHOLD: 0.1,
 } as const;

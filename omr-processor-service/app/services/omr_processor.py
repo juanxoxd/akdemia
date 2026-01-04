@@ -521,6 +521,8 @@ class OMRProcessor:
         Determine answer using RELATIVE CONTRAST within the row.
         The darkest bubble is selected if it's significantly darker than others.
         This works regardless of absolute lighting conditions.
+        
+        Thresholds optimized for phone camera photos with varying lighting.
         """
         if not intensities:
             return DetectedAnswer(
@@ -541,9 +543,9 @@ class OMRProcessor:
         row_range = lightest_val - darkest_val  # Range of intensities in this row
         contrast_to_second = second_darkest_val - darkest_val  # How much darker than second
         
-        # Decision thresholds
-        MIN_ROW_RANGE = 20  # Minimum range to consider that there's a marked bubble
-        MIN_CONTRAST = 10  # Minimum contrast to second darkest
+        # Decision thresholds - RELAXED for phone camera photos
+        MIN_ROW_RANGE = 15  # Minimum range to consider that there's a marked bubble (was 20)
+        MIN_CONTRAST = 5   # Minimum contrast to second darkest (was 10)
         
         # Check if there's enough contrast to detect a mark
         if row_range < MIN_ROW_RANGE:
@@ -557,19 +559,21 @@ class OMRProcessor:
             )
         
         # Check if darkest is significantly darker than second
+        # Only mark as MULTIPLE if contrast is very low
         if contrast_to_second < MIN_CONTRAST and len(sorted_opts) > 1:
-            # Multiple marks or ambiguous
+            # Multiple marks or ambiguous - but still pick the darkest
             return DetectedAnswer(
                 question_number=question_num,
                 selected_option=darkest_idx,
                 selected_option_label=ANSWER_LABELS[darkest_idx],
-                confidence_score=0.3,
+                confidence_score=0.5,  # Give moderate confidence (was 0.3)
                 status=AnswerStatus.MULTIPLE,
             )
         
         # Clear detection - calculate confidence based on relative contrast
-        confidence = min(1.0, contrast_to_second / 30.0)  # Higher contrast = higher confidence
-        confidence = max(0.5, confidence)
+        # More generous confidence calculation
+        confidence = min(1.0, contrast_to_second / 20.0)  # Higher contrast = higher confidence (was /30)
+        confidence = max(0.6, confidence)  # Higher minimum confidence (was 0.5)
         
         return DetectedAnswer(
             question_number=question_num,
