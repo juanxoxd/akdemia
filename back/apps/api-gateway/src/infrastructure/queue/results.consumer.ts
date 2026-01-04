@@ -101,6 +101,16 @@ export class ResultsConsumer implements OnModuleInit {
   private async handleResult(result: ProcessingResult): Promise<void> {
     this.logger.log(`📥 Resultado recibido para attempt: ${result.attemptId}`);
 
+    // Validar que el mensaje tenga los campos requeridos
+    if (!result.attemptId) {
+      this.logger.warn(
+        `⚠️ Mensaje recibido sin attemptId válido. Descartando mensaje. ` +
+        `examId=${result.examId}, studentId=${result.studentId}`
+      );
+      // No lanzar error para que el mensaje se descarte en lugar de reencolarse
+      return;
+    }
+
     try {
       if (result.success) {
         this.logger.log(

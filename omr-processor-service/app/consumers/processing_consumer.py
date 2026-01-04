@@ -74,14 +74,36 @@ class ProcessingConsumer:
         """Procesar un mensaje de la cola"""
         async with message.process():
             try:
-                body = json.loads(message.body.decode())
+                raw_body = json.loads(message.body.decode())
                 
-                logger.info(
-                    "Mensaje recibido",
-                    attempt_id=body.get("attemptId"),
-                    exam_id=body.get("examId"),
-                    student_id=body.get("studentId")
-                )
+                # NestJS microservices envía mensajes con formato: { pattern: "...", data: {...} }
+                # Extraer los datos reales del campo 'data' si existe
+                if "data" in raw_body and isinstance(raw_body.get("data"), dict):
+                    body = raw_body["data"]
+                    logger.info(
+                        "Mensaje NestJS recibido",
+                        pattern=raw_body.get("pattern"),
+                        attempt_id=body.get("attemptId"),
+                        exam_id=body.get("examId"),
+                        student_id=body.get("studentId")
+                    )
+                else:
+                    # Fallback: mensaje directo sin wrapper de NestJS
+                    body = raw_body
+                    logger.info(
+                        "Mensaje directo recibido",
+                        attempt_id=body.get("attemptId"),
+                        exam_id=body.get("examId"),
+                        student_id=body.get("studentId")
+                    )
+                
+                # Validar que el mensaje tenga los campos requeridos
+                if not body.get("attemptId"):
+                    logger.error(
+                        "Mensaje recibido sin attemptId válido, descartando",
+                        raw_body=str(raw_body)[:500]
+                    )
+                    return  # Descartar mensaje inválido
                 
                 # Procesar la imagen
                 result = await self.process_student_answer(body)
