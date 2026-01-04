@@ -1,7 +1,9 @@
 import { Module, Global } from '@nestjs/common';
 import { ClientProxyFactory, Transport } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { QUEUE_NAMES } from '@omr/shared-types';
+import { ExamAttempt, Answer } from '@omr/database';
 import { OMR_QUEUE_CLIENT } from './constants';
 import { RabbitMQService } from './rabbitmq.service';
 import { ResultsConsumer } from './results.consumer';
@@ -11,6 +13,7 @@ export { OMR_QUEUE_CLIENT } from './constants';
 
 @Global()
 @Module({
+  imports: [TypeOrmModule.forFeature([ExamAttempt, Answer])],
   providers: [
     {
       provide: OMR_QUEUE_CLIENT,

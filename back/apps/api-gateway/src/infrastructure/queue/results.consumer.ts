@@ -1,6 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { QUEUE_NAMES } from '@omr/shared-types';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { QUEUE_NAMES, ProcessingStatus, AnswerStatus } from '@omr/shared-types';
+import { ExamAttempt, Answer } from '@omr/database';
 
 export interface ProcessingResult {
   attemptId: string;
@@ -35,7 +38,13 @@ export class ResultsConsumer implements OnModuleInit {
   private connection: any = null;
   private channel: any = null;
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    @InjectRepository(ExamAttempt)
+    private readonly attemptRepository: Repository<ExamAttempt>,
+    @InjectRepository(Answer)
+    private readonly answerRepository: Repository<Answer>,
+  ) {}
 
   async onModuleInit() {
     // Iniciar conexión en background para no bloquear el startup
@@ -92,55 +101,62 @@ export class ResultsConsumer implements OnModuleInit {
   private async handleResult(result: ProcessingResult): Promise<void> {
     this.logger.log(`📥 Resultado recibido para attempt: ${result.attemptId}`);
 
-    if (result.success) {
-      this.logger.log(
-        `✅ Procesamiento exitoso - Score: ${result.score}/${result.totalQuestions} (${result.percentage}%)`,
-      );
+    try {
+      if (result.success) {
+        this.logger.log(
+          `✅ Procesamiento exitoso - Score: ${result.score}/${result.totalQuestions} (${result.percentage}%)`,
+        );
 
-      // TODO: Actualizar ExamAttempt en PostgreSQL
-      // await this.examAttemptRepository.update(result.attemptId, {
-      //   status: 'COMPLETED',
-      //   score: result.score,
-      //   totalCorrect: result.totalCorrect,
-      //   totalIncorrect: result.totalIncorrect,
-      //   totalBlank: result.totalBlank,
-      //   confidenceScore: result.confidenceScore,
-      //   processedAt: new Date(result.processedAt),
-      // });
+        // Actualizar ExamAttempt en PostgreSQL
+        await this.attemptRepository.update(result.attemptId, {
+          status: ProcessingStatus.COMPLETED,
+          score: result.score,
+          totalCorrect: result.totalCorrect,
+          totalIncorrect: result.totalIncorrect,
+          totalBlank: result.totalBlank,
+          confidenceScore: result.confidenceScore,
+          processedAt: new Date(result.processedAt),
+        });
 
-      // TODO: Guardar respuestas individuales en Answer entities
-      // for (const answer of result.answers || []) {
-      //   await this.answerRepository.create({
-      //     attemptId: result.attemptId,
-      //     questionNumber: answer.questionNumber,
-      //     selectedOption: answer.selectedOption,
-      //     correctOption: answer.correctOption,
-      //     isCorrect: answer.isCorrect,
-      //     status: answer.status,
-      //     confidenceScore: answer.confidenceScore,
-      //   });
-      // }
+        this.logger.log(`📊 Attempt ${result.attemptId} actualizado con score=${result.score}`);
 
-      // TODO: Cache en Redis para consultas rápidas
-      // await this.redisService.set(
-      //   `result:${result.examId}:${result.studentId}`,
-      //   JSON.stringify(result),
-      //   3600, // TTL 1 hora
-      // );
-    } else {
-      this.logger.error(
-        `❌ Procesamiento fallido - Error: ${result.error?.code} - ${result.error?.message}`,
-      );
+        // Guardar respuestas individuales en Answer entities
+        if (result.answers && result.answers.length > 0) {
+          // Eliminar respuestas anteriores si existen (para reintentos)
+          await this.answerRepository.delete({ attemptId: result.attemptId });
 
-      // TODO: Actualizar status a FAILED
-      // await this.examAttemptRepository.update(result.attemptId, {
-      //   status: 'FAILED',
-      //   errorCode: result.error?.code,
-      //   errorMessage: result.error?.message,
-      // });
+          for (const answerData of result.answers) {
+            const answer = this.answerRepository.create({
+              attemptId: result.attemptId,
+              questionNumber: answerData.questionNumber,
+              selectedOption: answerData.selectedOption ?? undefined,
+              isCorrect: answerData.isCorrect,
+              confidenceScore: answerData.confidenceScore,
+              status: answerData.status as AnswerStatus,
+            });
+            await this.answerRepository.save(answer);
+          }
+
+          this.logger.log(`📝 ${result.answers.length} respuestas guardadas para attempt ${result.attemptId}`);
+        }
+      } else {
+        this.logger.error(
+          `❌ Procesamiento fallido - Error: ${result.error?.code} - ${result.error?.message}`,
+        );
+
+        // Actualizar status a FAILED
+        await this.attemptRepository.update(result.attemptId, {
+          status: ProcessingStatus.FAILED,
+        });
+
+        this.logger.log(`⚠️ Attempt ${result.attemptId} marcado como FAILED`);
+      }
+
+      this.logger.log(`✅ Resultado persistido para attempt: ${result.attemptId}`);
+    } catch (error) {
+      this.logger.error(`❌ Error persistiendo resultado para attempt ${result.attemptId}:`, error);
+      throw error; // Re-throw para que el mensaje se reencole
     }
-
-    this.logger.log(`📝 Resultado procesado para attempt: ${result.attemptId}`);
   }
 
   async onModuleDestroy() {
