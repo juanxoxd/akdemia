@@ -150,14 +150,17 @@ export class ProcessingController {
     file: Express.Multer.File,
     @Body() body: SubmitStudentAnswerDto,
   ) {
-    // TODO: En producción, el answerKey se obtendría de la base de datos
-    const mockAnswerKey = Array(body.totalQuestions).fill([0]); // Placeholder
+    // Obtener el answer key REAL de la base de datos
+    const answerKey = await this.processingService.getAnswerKeyForProcessing(
+      examId,
+      body.totalQuestions,
+    );
     
     return this.processingService.submitStudentAnswer(
       examId,
       studentId,
       file,
-      mockAnswerKey,
+      answerKey,
       body.totalQuestions,
       body.optionsPerQuestion,
     );

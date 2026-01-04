@@ -234,6 +234,43 @@ export class ProcessingService {
   }
 
   /**
+   * Obtener el answer key del examen en formato number[][] para procesamiento
+   */
+  async getAnswerKeyForProcessing(examId: string, totalQuestions: number): Promise<number[][]> {
+    const exam = await this.examRepository.findOne({ where: { id: examId } });
+    
+    if (!exam) {
+      throw new NotFoundException('Exam not found');
+    }
+
+    // Verificar que el exam tiene un answer key guardado
+    if (!exam.answerKey || !exam.answerKey.answers) {
+      this.logger.warn(`Examen ${examId} no tiene answer key confirmado, usando respuestas vacías`);
+      // Retornar array vacío si no hay answer key (todas serán incorrectas)
+      return Array(totalQuestions).fill([]);
+    }
+
+    // El answerKey está guardado como: { answers: [{ questionNumber, correctOption, confidenceScore }] }
+    // Convertir a formato number[][]: [[0], [3], [4], ...]
+    const answerKeyArray: number[][] = [];
+    
+    for (let i = 0; i < totalQuestions; i++) {
+      const answerData = exam.answerKey.answers.find(
+        (a: { questionNumber: number; correctOption: number }) => a.questionNumber === i + 1
+      );
+      
+      if (answerData && answerData.correctOption !== null && answerData.correctOption !== undefined) {
+        answerKeyArray.push([answerData.correctOption]);
+      } else {
+        answerKeyArray.push([]); // Sin respuesta correcta definida
+      }
+    }
+
+    this.logger.log(`Answer key obtenido para examen ${examId}: ${answerKeyArray.length} respuestas`);
+    return answerKeyArray;
+  }
+
+  /**
    * FLUJO 2: Procesar Respuesta de Estudiante - ASÍNCRONO con RabbitMQ
    * Cliente -> NestJS -> S3 -> RabbitMQ (cola) -> FastAPI consume -> resultado
    */
