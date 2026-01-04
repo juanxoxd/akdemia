@@ -87,14 +87,21 @@ export class ProcessingService {
       formData.append('total_questions', totalQuestions.toString());
       formData.append('options_per_question', optionsPerQuestion.toString());
 
-      const response = await fetch(`${this.omrProcessorUrl}/api/processing/answer-key`, {
+      const url = `${this.omrProcessorUrl}/api/processing/answer-key`;
+      this.logger.log(`Llamando a OMR Service: ${url}`);
+      this.logger.log(`OMR_PROCESSOR_URL configurada: ${this.omrProcessorUrl}`);
+
+      const response = await fetch(url, {
         method: 'POST',
         body: formData,
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as { detail?: string };
-        throw new HttpException(errorData.detail || 'Error procesando answer key', response.status);
+        const errorData = (await response.json()) as { detail?: string | object; message?: string };
+        const errorDetail = typeof errorData.detail === 'object' 
+          ? errorData.detail 
+          : errorData.detail || errorData.message || 'Error procesando answer key';
+        throw new HttpException(errorDetail, response.status);
       }
 
       const result = (await response.json()) as AnswerKeyProcessingResult;
@@ -158,14 +165,33 @@ export class ProcessingService {
         answerMatrix: result.detected_answers.map(a => a.selected_option),
       };
     } catch (error) {
-      this.logger.error(`Error procesando answer key: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : '';
+      const errorCause = error instanceof Error && 'cause' in error ? String(error.cause) : '';
+      
+      this.logger.error(`Error procesando answer key: ${errorMessage}`);
+      this.logger.error(`URL intentada: ${this.omrProcessorUrl}/api/processing/answer-key`);
+      if (errorCause) {
+        this.logger.error(`Causa del error: ${errorCause}`);
+      }
+      if (errorStack) {
+        this.logger.error(`Stack trace: ${errorStack}`);
+      }
+
+      // Cleanup: Delete the uploaded file since processing failed
+      try {
+        await this.s3Service.deleteFile(key);
+        this.logger.log(`Archivo eliminado del bucket tras error: ${key}`);
+      } catch (deleteError) {
+        this.logger.warn(`No se pudo eliminar archivo tras error: ${key}`, deleteError);
+      }
 
       if (error instanceof HttpException) {
         throw error;
       }
 
       throw new HttpException(
-        'No se pudo conectar con el servicio de procesamiento OMR',
+        `No se pudo conectar con el servicio de procesamiento OMR. URL: ${this.omrProcessorUrl}. Error: ${errorMessage}`,
         HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
