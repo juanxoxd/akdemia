@@ -281,14 +281,29 @@ const MenuItemButton: React.FC<MenuItemButtonProps> = ({ item, isActive, onPress
   );
 };
 
-// Hook to use the drawer
-export const useDrawer = () => {
-  const [isOpen, setIsOpen] = React.useState(false);
+// Zustand store for drawer state (global, works consistently on mobile)
+import { create } from 'zustand';
 
-  return {
-    isOpen,
-    open: () => setIsOpen(true),
-    close: () => setIsOpen(false),
-    toggle: () => setIsOpen((prev) => !prev),
-  };
-};
+interface DrawerState {
+  isOpen: boolean;
+  open: () => void;
+  close: () => void;
+  toggle: () => void;
+}
+
+export const useDrawer = create<DrawerState>((set) => ({
+  isOpen: false,
+  open: () => {
+    console.log('[Drawer Store] Opening drawer');
+    set({ isOpen: true });
+  },
+  close: () => {
+    console.log('[Drawer Store] Closing drawer');
+    set({ isOpen: false });
+  },
+  toggle: () =>
+    set((state) => {
+      console.log('[Drawer Store] Toggling drawer, was:', state.isOpen);
+      return { isOpen: !state.isOpen };
+    }),
+}));

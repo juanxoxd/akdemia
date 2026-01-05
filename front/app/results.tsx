@@ -18,15 +18,9 @@ export default function ResultsScreen() {
   const { selectedExam, resetExamState } = useExamStore();
   const { resetCaptureState } = useCaptureStore();
   const { resetProcessingState } = useProcessingStore();
-  
-  const {
-    examAttempt,
-    isPolling,
-    pollingAttempts,
-    processingError,
-    startPolling,
-    stopPolling,
-  } = useProcessing();
+
+  const { examAttempt, isPolling, pollingAttempts, processingError, startPolling, stopPolling } =
+    useProcessing();
 
   // Start polling on mount if not already
   useEffect(() => {
@@ -57,32 +51,45 @@ export default function ResultsScreen() {
       // Open image in modal or browser
       Alert.alert('Imagen', 'Abrir imagen en navegador', [
         { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Abrir', 
+        {
+          text: 'Abrir',
           onPress: () => {
             // In production, use Linking.openURL or show in modal
             console.log('Open image:', examAttempt.imageUrl);
-          }
+          },
         },
       ]);
     }
   };
 
-  // Loading state
-  if (isPolling && (!examAttempt || examAttempt.status === 'PENDING' || examAttempt.status === 'PROCESSING')) {
+  // Loading/Processing state
+  const isCurrentlyProcessing =
+    isPolling ||
+    (examAttempt &&
+      (examAttempt.status === 'PENDING' ||
+        examAttempt.status === 'PROCESSING' ||
+        (examAttempt.status as string) === 'processing'));
+
+  if (isCurrentlyProcessing) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center p-6">
-        <View className="items-center">
+        <View className="items-center bg-white p-10 rounded-3xl shadow-sm border border-gray-100">
           <LoadingSpinner size="large" />
-          <Text className="text-gray-900 font-semibold text-lg mt-6">
-            Procesando tu hoja de respuestas
+          <Text className="text-gray-900 font-bold text-xl mt-8 text-center">
+            {examAttempt?.status === 'processing' || examAttempt?.status === 'PROCESSING'
+              ? 'Calificando examen...'
+              : 'Subiendo hoja...'}
           </Text>
-          <Text className="text-gray-500 text-center mt-2">
-            Esto puede tomar unos segundos...
+          <Text className="text-gray-500 text-center mt-3 leading-6">
+            Estamos analizando las burbujas de tu hoja de respuestas. Esto solo tomará unos
+            segundos.
           </Text>
-          <Text className="text-gray-400 text-sm mt-4">
-            Intento {pollingAttempts} de 30
-          </Text>
+
+          <View className="mt-8 bg-blue-50 px-4 py-2 rounded-full border border-blue-100">
+            <Text className="text-primary-700 font-medium text-xs">
+              Intento de sincronización: {pollingAttempts}
+            </Text>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -101,12 +108,7 @@ export default function ResultsScreen() {
           retryLabel="Escanear de nuevo"
         />
         <View className="mt-4">
-          <Button
-            title="Volver al inicio"
-            onPress={handleGoHome}
-            variant="outline"
-            fullWidth
-          />
+          <Button title="Volver al inicio" onPress={handleGoHome} variant="outline" fullWidth />
         </View>
       </SafeAreaView>
     );
@@ -118,12 +120,10 @@ export default function ResultsScreen() {
       <SafeAreaView className="flex-1 bg-gray-50 p-6">
         <View className="items-center py-8">
           <Ionicons name="warning" size={64} color="#f59e0b" />
-          <Text className="text-gray-900 font-bold text-xl mt-4">
-            Revisión Pendiente
-          </Text>
+          <Text className="text-gray-900 font-bold text-xl mt-4">Revisión Pendiente</Text>
           <Text className="text-gray-600 text-center mt-2 px-4">
-            El escaneo tiene baja confianza ({((examAttempt.confidenceScore || 0) * 100).toFixed(1)}%).
-            Tu hoja será revisada manualmente.
+            El escaneo tiene baja confianza ({((examAttempt.confidenceScore || 0) * 100).toFixed(1)}
+            %). Tu hoja será revisada manualmente.
           </Text>
         </View>
 
@@ -143,12 +143,7 @@ export default function ResultsScreen() {
             variant="primary"
             fullWidth
           />
-          <Button
-            title="Volver al inicio"
-            onPress={handleGoHome}
-            variant="outline"
-            fullWidth
-          />
+          <Button title="Volver al inicio" onPress={handleGoHome} variant="outline" fullWidth />
         </View>
       </SafeAreaView>
     );
@@ -158,7 +153,7 @@ export default function ResultsScreen() {
   if (examAttempt?.status === 'COMPLETED' && examAttempt.score !== undefined) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50" edges={['bottom']}>
-        <ScrollView 
+        <ScrollView
           className="flex-1"
           contentContainerStyle={{ paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
@@ -169,8 +164,9 @@ export default function ResultsScreen() {
               {selectedExam?.title || 'Examen'}
             </Text>
             <Text className="text-primary-200 text-sm mt-1">
-              Procesado: {examAttempt.processedAt 
-                ? new Date(examAttempt.processedAt).toLocaleString() 
+              Procesado:{' '}
+              {examAttempt.processedAt
+                ? new Date(examAttempt.processedAt).toLocaleString()
                 : 'Ahora'}
             </Text>
           </View>
@@ -196,9 +192,7 @@ export default function ResultsScreen() {
               <Card onPress={handleViewImage}>
                 <View className="flex-row items-center">
                   <Ionicons name="image-outline" size={24} color="#2563eb" />
-                  <Text className="text-primary-600 font-medium ml-2">
-                    Ver imagen escaneada
-                  </Text>
+                  <Text className="text-primary-600 font-medium ml-2">Ver imagen escaneada</Text>
                 </View>
               </Card>
             </View>
@@ -214,12 +208,7 @@ export default function ResultsScreen() {
         <View className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-4">
           <View className="flex-row gap-3">
             <View className="flex-1">
-              <Button
-                title="Inicio"
-                onPress={handleGoHome}
-                variant="outline"
-                fullWidth
-              />
+              <Button title="Inicio" onPress={handleGoHome} variant="outline" fullWidth />
             </View>
             <View className="flex-1">
               <Button

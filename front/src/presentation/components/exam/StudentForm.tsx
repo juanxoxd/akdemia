@@ -10,13 +10,9 @@ interface StudentFormProps {
   error?: string | null;
 }
 
-export const StudentForm: React.FC<StudentFormProps> = ({
-  onSubmit,
-  isLoading,
-  error,
-}) => {
+export const StudentForm: React.FC<StudentFormProps> = ({ onSubmit, isLoading, error }) => {
   const { currentStudent, setCurrentStudent } = useExamStore();
-  
+
   const [studentCode, setStudentCode] = useState(currentStudent?.studentCode || '');
   const [fullName, setFullName] = useState(currentStudent?.fullName || '');
   const [email, setEmail] = useState(currentStudent?.email || '');
@@ -61,21 +57,17 @@ export const StudentForm: React.FC<StudentFormProps> = ({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1"
     >
-      <ScrollView 
+      <ScrollView
         className="flex-1 px-6"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Text className="text-2xl font-bold text-gray-900 mb-2">
-          Datos del Estudiante
-        </Text>
-        <Text className="text-gray-600 mb-6">
-          Ingrese sus datos para continuar con el examen
-        </Text>
+        <Text className="text-2xl font-bold text-gray-900 mb-2">Datos del Estudiante</Text>
+        <Text className="text-gray-600 mb-6">Ingrese sus datos para continuar con el examen</Text>
 
         <Input
           label="Código de Estudiante"
-          placeholder="Ej: 20230001"
+          placeholder="Ej: 2024-0101"
           value={studentCode}
           onChangeText={setStudentCode}
           error={errors.studentCode}
@@ -109,12 +101,7 @@ export const StudentForm: React.FC<StudentFormProps> = ({
         )}
 
         <View className="mt-4 mb-8">
-          <Button
-            title="Continuar"
-            onPress={handleSubmit}
-            loading={isLoading}
-            fullWidth
-          />
+          <Button title="Continuar" onPress={handleSubmit} loading={isLoading} fullWidth />
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

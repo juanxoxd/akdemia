@@ -52,16 +52,18 @@ export const useRegisterStudent = () => {
       if (!selectedExam) {
         throw new Error('No exam selected');
       }
+      // POST /exams/:examId/students - backend will find or create student
       return examApi.registerStudent(selectedExam.examId, data);
     },
-    onSuccess: (response) => {
+    onSuccess: (response, data) => {
       if (selectedExam) {
+        console.log('[useExams] Registration success, studentId:', response.studentId);
         setRegisteredStudent({
           studentId: response.studentId,
           examId: response.examId,
-          studentCode: '',
-          fullName: '',
-          email: '',
+          studentCode: data.studentCode,
+          fullName: data.fullName,
+          email: data.email,
         });
       }
     },

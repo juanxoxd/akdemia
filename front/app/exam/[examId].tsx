@@ -29,6 +29,7 @@ export default function StudentRegistrationScreen() {
 
     registerStudent(data, {
       onSuccess: (response) => {
+        console.log('[StudentReg] Success response:', response);
         setRegisteredStudent({
           studentId: response.studentId,
           examId: response.examId,
@@ -45,13 +46,8 @@ export default function StudentRegistrationScreen() {
     return (
       <SafeAreaView className="flex-1 bg-gray-50 items-center justify-center p-6">
         <Ionicons name="alert-circle" size={64} color="#ef4444" />
-        <Text className="text-gray-900 font-semibold text-lg mt-4">
-          No hay examen seleccionado
-        </Text>
-        <Text 
-          className="text-primary-600 mt-4 underline"
-          onPress={() => router.back()}
-        >
+        <Text className="text-gray-900 font-semibold text-lg mt-4">No hay examen seleccionado</Text>
+        <Text className="text-primary-600 mt-4 underline" onPress={() => router.back()}>
           Volver a exámenes
         </Text>
       </SafeAreaView>
@@ -68,9 +64,7 @@ export default function StudentRegistrationScreen() {
               <Ionicons name="document-text" size={24} color="#2563eb" />
             </View>
             <View className="flex-1">
-              <Text className="font-semibold text-gray-900 text-base">
-                {selectedExam.title}
-              </Text>
+              <Text className="font-semibold text-gray-900 text-base">{selectedExam.title}</Text>
               <Text className="text-gray-500 text-sm mt-1">
                 {selectedExam.totalQuestions} preguntas
               </Text>

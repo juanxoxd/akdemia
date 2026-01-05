@@ -38,7 +38,14 @@ interface ApiStudent {
   updatedAt?: string;
   attemptId?: string;
   attemptStatus?: string;
-  score?: number | null;
+  score?: string | number | null;
+  processedAt?: string;
+}
+
+// Response from /exams/{examId}/students/search endpoint
+interface StudentSearchResponse {
+  count: number;
+  items: ApiStudent[];
 }
 
 // Map API response to frontend Exam interface
@@ -95,11 +102,31 @@ export const examApi = {
     if (useMock) {
       return mockExamApi.registerStudent(examId, data);
     }
-    const response = await apiClient.post<StudentRegistrationResponse>(
+
+    // Backend response type
+    interface ApiStudentRegistrationResponse {
+      id?: string;
+      studentId?: string;
+      examId?: string;
+      code?: string;
+      fullName?: string;
+      email?: string;
+      attemptId?: string;
+    }
+
+    const response = await apiClient.post<ApiStudentRegistrationResponse>(
       `/exams/${examId}/students`,
       data
     );
-    return response.data;
+
+    console.log('[API] registerStudent response:', response.data);
+
+    // Map API response to frontend format
+    // Backend might return 'id' instead of 'studentId'
+    return {
+      studentId: response.data.id || response.data.studentId || '',
+      examId: response.data.examId || examId,
+    };
   },
 
   // Create new exam (admin)
@@ -137,5 +164,126 @@ export const examApi = {
     // Backend returns { items: [...], meta: {...} }, extract and map the array
     const apiStudents = response.data?.items || [];
     return apiStudents.map((s) => mapApiStudentToStudent(s, examId));
+  },
+
+  // Find student by code
+  findStudentByCode: async (studentCode: string): Promise<Student | null> => {
+    if (useMock) return null;
+
+    try {
+      console.log('[API] Searching student by code:', studentCode);
+      const response = await apiClient.get<ApiStudent>(
+        `/students/search?code=${encodeURIComponent(studentCode)}`
+      );
+
+      const found = response.data;
+      return {
+        studentId: found.id,
+        examId: '',
+        studentCode: found.code,
+        fullName: found.fullName,
+        email: found.email,
+      };
+    } catch (error) {
+      console.log('[API] Student not found or error:', error);
+      return null;
+    }
+  },
+
+  // Get student by ID
+  getStudentById: async (studentId: string): Promise<Student | null> => {
+    if (useMock) return null;
+
+    try {
+      console.log('[API] Getting student by ID:', studentId);
+      const response = await apiClient.get<ApiStudent>(`/students/${studentId}`);
+      const found = response.data;
+
+      return {
+        studentId: found.id,
+        examId: '',
+        studentCode: found.code,
+        fullName: found.fullName,
+        email: found.email,
+      };
+    } catch (error) {
+      console.log('[API] Student not found:', error);
+      return null;
+    }
+  },
+
+  // NEW: Get all attempts for a student
+  getStudentAttempts: async (studentId: string) => {
+    if (useMock) return [];
+    const response = await apiClient.get<any[]>(`/students/${studentId}/attempts`);
+    return response.data;
+  },
+
+  // Search student in a specific exam by code - returns score, attemptId, etc.
+  searchStudentInExam: async (examId: string, studentCode: string): Promise<ApiStudent | null> => {
+    if (useMock) return null;
+
+    try {
+      console.log('[API] Searching student in exam:', { examId, studentCode });
+      const response = await apiClient.get<StudentSearchResponse>(
+        `/exams/${examId}/students/search?code=${encodeURIComponent(studentCode)}`
+      );
+
+      if (response.data.count > 0 && response.data.items.length > 0) {
+        return response.data.items[0];
+      }
+      return null;
+    } catch (error) {
+      console.log('[API] Student not found in exam:', error);
+      return null;
+    }
+  },
+
+  // Search student across all exams and return all their results
+  searchStudentResultsAcrossExams: async (studentCode: string): Promise<any[]> => {
+    if (useMock) return [];
+
+    try {
+      // 1. Get all exams
+      const examsResponse = await apiClient.get<{ items: ApiExam[]; meta: any }>('/exams');
+      const exams = examsResponse.data?.items || [];
+
+      // 2. Search for student in each exam
+      const results: any[] = [];
+      for (const exam of exams) {
+        try {
+          const response = await apiClient.get<StudentSearchResponse>(
+            `/exams/${exam.id}/students/search?code=${encodeURIComponent(studentCode)}`
+          );
+
+          if (response.data.count > 0 && response.data.items.length > 0) {
+            const student = response.data.items[0];
+            // Only include if there's an attempt
+            if (student.attemptId) {
+              results.push({
+                examId: exam.id,
+                examTitle: exam.title,
+                studentId: student.id,
+                code: student.code,
+                fullName: student.fullName,
+                attemptId: student.attemptId,
+                status: student.attemptStatus,
+                score: student.score,
+                processedAt: student.processedAt,
+                createdAt: student.createdAt,
+              });
+            }
+          }
+        } catch (err) {
+          // Ignore errors for individual exams
+          console.log(`[API] Error searching in exam ${exam.id}:`, err);
+        }
+      }
+
+      return results;
+    } catch (error) {
+      console.error('[API] Error searching student across exams:', error);
+      return [];
+    }
   },
 };

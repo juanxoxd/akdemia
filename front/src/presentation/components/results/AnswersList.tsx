@@ -38,13 +38,13 @@ export const AnswersList: React.FC<AnswersListProps> = ({ answers }) => {
     };
 
     const style = getStatusStyle();
-    const selectedLetter = item.selectedOption !== null 
-      ? OptionLetters[item.selectedOption] 
-      : '-';
+    const selectedLetter = item.selectedOption !== null ? OptionLetters[item.selectedOption] : '-';
     const correctLetter = OptionLetters[item.correctOption];
 
     return (
-      <View className={`flex-row items-center p-3 mb-2 rounded-xl border ${style.bgColor} ${style.borderColor}`}>
+      <View
+        className={`flex-row items-center p-3 mb-2 rounded-xl border ${style.bgColor} ${style.borderColor}`}
+      >
         {/* Question number */}
         <View className="w-10 h-10 rounded-full bg-white items-center justify-center mr-3">
           <Text className="font-bold text-gray-700">{item.questionNumber}</Text>
@@ -54,21 +54,26 @@ export const AnswersList: React.FC<AnswersListProps> = ({ answers }) => {
         <View className="flex-1">
           <View className="flex-row items-center">
             <Text className="text-gray-600">Tu respuesta: </Text>
-            <Text className={`font-bold ${
-              item.status === 'correct' ? 'text-success-600' : 
-              item.status === 'incorrect' ? 'text-error-600' : 'text-gray-500'
-            }`}>
+            <Text
+              className={`font-bold ${
+                item.status === 'correct'
+                  ? 'text-success-600'
+                  : item.status === 'incorrect'
+                    ? 'text-error-600'
+                    : 'text-gray-500'
+              }`}
+            >
               {selectedLetter}
             </Text>
-            
-            {item.status === 'incorrect' && (
+
+            {item.status === 'incorrect' && item.correctOption !== undefined && (
               <>
                 <Text className="text-gray-400 mx-2">→</Text>
                 <Text className="text-success-600 font-bold">{correctLetter}</Text>
               </>
             )}
           </View>
-          
+
           {item.confidenceScore < 0.85 && (
             <Text className="text-warning-600 text-xs mt-1">
               ⚠ Confianza baja ({(item.confidenceScore * 100).toFixed(0)}%)
@@ -84,9 +89,7 @@ export const AnswersList: React.FC<AnswersListProps> = ({ answers }) => {
 
   return (
     <View className="px-4 mt-4">
-      <Text className="text-lg font-semibold text-gray-900 mb-3">
-        Detalle de Respuestas
-      </Text>
+      <Text className="text-lg font-semibold text-gray-900 mb-3">Detalle de Respuestas</Text>
       <FlatList
         data={answers}
         renderItem={renderAnswer}

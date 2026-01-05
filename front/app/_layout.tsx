@@ -59,7 +59,10 @@ const MockBadge = () =>
   ) : null;
 
 export default function RootLayout() {
-  const drawer = useDrawer();
+  // Zustand store - get state and actions directly
+  const isOpen = useDrawer((state) => state.isOpen);
+  const openDrawer = useDrawer((state) => state.open);
+  const closeDrawer = useDrawer((state) => state.close);
 
   useEffect(() => {
     // Hide splash screen after app is ready
@@ -72,15 +75,15 @@ export default function RootLayout() {
 
   const handleOpenDrawer = React.useCallback(() => {
     console.log('[Layout] Opening drawer');
-    drawer.open();
-  }, [drawer]);
+    openDrawer();
+  }, [openDrawer]);
 
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <ToastProvider>
           <StatusBar style="light" />
-          <DrawerMenu isOpen={drawer.isOpen} onClose={drawer.close} />
+          <DrawerMenu isOpen={isOpen} onClose={closeDrawer} />
           <Stack
             screenOptions={{
               headerStyle: {

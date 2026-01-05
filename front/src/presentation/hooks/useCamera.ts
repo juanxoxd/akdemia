@@ -35,13 +35,21 @@ export const useCamera = () => {
     return status === 'granted';
   }, [setCameraPermission]);
 
-  // Check permissions on mount
+  // Check permissions on mount - don't set denied immediately, request first if needed
   useEffect(() => {
     const checkPermission = async () => {
-      const { status } = await Camera.getCameraPermissionsAsync();
+      console.log('[useCamera] Checking camera permissions...');
+      const { status, canAskAgain } = await Camera.getCameraPermissionsAsync();
+      console.log('[useCamera] Permission status:', status, 'canAskAgain:', canAskAgain);
+
       if (status === 'granted') {
         setCameraPermission('granted');
-      } else if (status === 'denied') {
+      } else if (status === 'undetermined' || canAskAgain) {
+        // If undetermined or we can ask again, keep as undetermined so the UI can request
+        console.log('[useCamera] Permission not granted but can ask, keeping as undetermined');
+        setCameraPermission('undetermined');
+      } else {
+        // Only set denied if we truly cannot ask again
         setCameraPermission('denied');
       }
     };
@@ -162,5 +170,6 @@ export const useCamera = () => {
     toggleCameraFacing,
     toggleFlash,
     onCameraReady: () => setCameraReady(true),
+    setCameraPermission,
   };
 };

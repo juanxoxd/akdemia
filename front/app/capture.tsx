@@ -1,10 +1,21 @@
 import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { View, Text, Alert, Linking, Image, TouchableOpacity, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Alert,
+  Platform,
+  Linking,
+  ActivityIndicator,
+  Image,
+} from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { CameraView } from 'expo-camera';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { DeviceMotion } from 'expo-sensors';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { CameraOverlay } from '../src/presentation/components/camera/CameraOverlay';
 import { CameraControls } from '../src/presentation/components/camera/CameraControls';
 import { Button } from '../src/presentation/components/common/Button';
@@ -42,14 +53,10 @@ export default function CaptureScreen() {
     toggleCameraFacing,
     toggleFlash,
     onCameraReady,
+    setCameraPermission,
   } = useCamera();
 
-  const {
-    captureMode,
-    isProcessingImage,
-    setCaptureMode,
-    resetCaptureState,
-  } = useCaptureStore();
+  const { captureMode, isProcessingImage, setCaptureMode, resetCaptureState } = useCaptureStore();
 
   const [screenDimensions, setScreenDimensions] = useState({ width: 0, height: 0 });
   const [previewImage, setPreviewImage] = useState<CapturedImage | null>(null);
@@ -70,6 +77,12 @@ export default function CaptureScreen() {
 
   // Check if DeviceMotion is available
   useEffect(() => {
+    if (Platform.OS === 'web') {
+      setSensorAvailable(false);
+      setConfidence(0.5);
+      return;
+    }
+
     DeviceMotion.isAvailableAsync().then((available) => {
       console.log('DeviceMotion available:', available);
       setSensorAvailable(available);
@@ -82,6 +95,7 @@ export default function CaptureScreen() {
 
   // Device motion sensor for auto-capture
   useEffect(() => {
+    if (Platform.OS === 'web') return; // Never start sensors on web
     if (cameraPermission !== 'granted' || showConfirmation) return;
     if (!sensorAvailable) return;
     if (captureMode !== 'auto') {
@@ -90,45 +104,50 @@ export default function CaptureScreen() {
     }
 
     console.log('Starting DeviceMotion sensor...');
-    DeviceMotion.setUpdateInterval(SENSOR_CONFIG.UPDATE_INTERVAL);
+    try {
+      DeviceMotion.setUpdateInterval(SENSOR_CONFIG.UPDATE_INTERVAL);
 
-    const subscription = DeviceMotion.addListener((motionData) => {
-      if (!motionData.rotation) {
-        console.log('No rotation data');
-        return;
-      }
+      const subscription = DeviceMotion.addListener((motionData) => {
+        if (!motionData.rotation) {
+          console.log('No rotation data');
+          return;
+        }
 
-      // Check if phone is flat (beta and gamma near 0)
-      const beta = Math.abs(motionData.rotation.beta ?? 0);
-      const gamma = Math.abs(motionData.rotation.gamma ?? 0);
-      const isFlat = beta < SENSOR_CONFIG.FLAT_TOLERANCE && gamma < SENSOR_CONFIG.FLAT_TOLERANCE;
+        // Check if phone is flat (beta and gamma near 0)
+        const beta = Math.abs(motionData.rotation.beta ?? 0);
+        const gamma = Math.abs(motionData.rotation.gamma ?? 0);
+        const isFlat = beta < SENSOR_CONFIG.FLAT_TOLERANCE && gamma < SENSOR_CONFIG.FLAT_TOLERANCE;
 
-      // Check if phone is still (low acceleration) - use optional chaining
-      const acc = motionData.acceleration;
-      const accX = Math.abs(acc?.x ?? 0);
-      const accY = Math.abs(acc?.y ?? 0);
-      const accZ = Math.abs(acc?.z ?? 0);
-      const totalAcceleration = accX + accY + accZ;
-      const isStill = totalAcceleration < SENSOR_CONFIG.STILL_TOLERANCE;
+        // Check if phone is still (low acceleration) - use optional chaining
+        const acc = motionData.acceleration;
+        const accX = Math.abs(acc?.x ?? 0);
+        const accY = Math.abs(acc?.y ?? 0);
+        const accZ = Math.abs(acc?.z ?? 0);
+        const totalAcceleration = accX + accY + accZ;
+        const isStill = totalAcceleration < SENSOR_CONFIG.STILL_TOLERANCE;
 
-      // Calculate confidence
-      let newConfidence = 0.2; // Baseline
-      if (isFlat) newConfidence += 0.4;
-      if (isStill) newConfidence += 0.4;
-      newConfidence = Math.min(newConfidence, 1.0);
+        // Calculate confidence
+        let newConfidence = 0.2; // Baseline
+        if (isFlat) newConfidence += 0.4;
+        if (isStill) newConfidence += 0.4;
+        newConfidence = Math.min(newConfidence, 1.0);
 
-      setConfidence(newConfidence);
-    });
+        setConfidence(newConfidence);
+      });
 
-    return () => {
-      console.log('Stopping DeviceMotion sensor');
-      subscription.remove();
-    };
+      return () => {
+        console.log('Stopping DeviceMotion sensor');
+        subscription.remove();
+      };
+    } catch (error) {
+      console.log('Error adding DeviceMotion listener:', error);
+      setSensorAvailable(false);
+    }
   }, [cameraPermission, captureMode, sensorAvailable, showConfirmation]);
 
   // Update confidence for manual mode or when sensors unavailable
   useEffect(() => {
-    if (captureMode === 'manual' || !sensorAvailable) {
+    if (captureMode === 'manual' || !sensorAvailable || Platform.OS === 'web') {
       setConfidence(0.6);
     }
   }, [captureMode, sensorAvailable]);
@@ -163,19 +182,19 @@ export default function CaptureScreen() {
     return {
       topLeft: {
         x: screenDimensions.width * ENV.FRAME_MARGIN_HORIZONTAL,
-        y: screenDimensions.height * ENV.FRAME_MARGIN_TOP
+        y: screenDimensions.height * ENV.FRAME_MARGIN_TOP,
       },
       topRight: {
         x: screenDimensions.width * (1 - ENV.FRAME_MARGIN_HORIZONTAL),
-        y: screenDimensions.height * ENV.FRAME_MARGIN_TOP
+        y: screenDimensions.height * ENV.FRAME_MARGIN_TOP,
       },
       bottomLeft: {
         x: screenDimensions.width * ENV.FRAME_MARGIN_HORIZONTAL,
-        y: screenDimensions.height * (1 - ENV.FRAME_MARGIN_BOTTOM)
+        y: screenDimensions.height * (1 - ENV.FRAME_MARGIN_BOTTOM),
       },
       bottomRight: {
         x: screenDimensions.width * (1 - ENV.FRAME_MARGIN_HORIZONTAL),
-        y: screenDimensions.height * (1 - ENV.FRAME_MARGIN_BOTTOM)
+        y: screenDimensions.height * (1 - ENV.FRAME_MARGIN_BOTTOM),
       },
     };
   };
@@ -208,7 +227,7 @@ export default function CaptureScreen() {
     if (captureFor === 'answer-key' && examId) {
       router.push({
         pathname: '/preview',
-        params: { mode: 'answer-key', examId }
+        params: { mode: 'answer-key', examId },
       } as any);
     } else {
       router.push('/preview');
@@ -232,20 +251,123 @@ export default function CaptureScreen() {
     Linking.openSettings();
   };
 
-  // Permission denied
-  if (cameraPermission === 'denied') {
+  // Pick image from gallery
+  const handlePickFromGallery = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        'Permiso requerido',
+        'Necesitamos acceso a tu galería para seleccionar la imagen'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      try {
+        const asset = result.assets[0];
+
+        // Process the image to match expected format
+        const processed = await ImageManipulator.manipulateAsync(
+          asset.uri,
+          [{ resize: { width: ENV.OUTPUT_WIDTH } }],
+          {
+            compress: ENV.JPEG_QUALITY,
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: true,
+          }
+        );
+
+        const base64Length = processed.base64?.length || 0;
+        const sizeInMB = (base64Length * 3) / 4 / 1024 / 1024;
+
+        const capturedImg: CapturedImage = {
+          uri: processed.uri,
+          base64: processed.base64,
+          width: processed.width,
+          height: processed.height,
+          sizeInMB,
+        };
+
+        // Store and show preview
+        setPreviewImage(capturedImg);
+        setShowConfirmation(true);
+
+        // Also set in global store
+        const { setCapturedImage } = useCaptureStore.getState();
+        setCapturedImage(capturedImg);
+      } catch (error) {
+        console.error('Error processing gallery image:', error);
+        Alert.alert('Error', 'No se pudo procesar la imagen');
+      }
+    }
+  };
+
+  // Render camera permission or web specific view
+  if (cameraPermission === 'undetermined' && Platform.OS !== 'web') {
     return (
-      <SafeAreaView className="flex-1 bg-black items-center justify-center p-6">
-        <Ionicons name="videocam-off-outline" size={64} color="#ef4444" />
-        <Text className="text-white text-xl font-semibold mt-6 text-center">
-          Permiso de Cámara Denegado
-        </Text>
-        <Text className="text-gray-400 text-center mt-4 px-4">
-          Para escanear hojas de respuestas, necesitamos acceso a la cámara.
-        </Text>
-        <View className="mt-8 w-full gap-4">
-          <Button title="Abrir Configuración" onPress={handleOpenSettings} variant="primary" fullWidth />
-          <Button title="Volver" onPress={handleClose} variant="outline" fullWidth />
+      <View className="flex-1 bg-black items-center justify-center">
+        <ActivityIndicator size="large" color="#ffffff" />
+      </View>
+    );
+  }
+
+  // Modern UI for Web or when permission is denied
+  if (!showConfirmation && (cameraPermission === 'denied' || Platform.OS === 'web')) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="flex-1 px-6 justify-center">
+          <View className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+            <Text className="text-2xl font-bold text-gray-900 mb-2">Subir Hoja de Respuestas</Text>
+            <Text className="text-gray-500 mb-8">
+              Elige cómo prefieres cargar la imagen del examen
+            </Text>
+
+            <View className="space-y-4">
+              {/* Tomar Foto Button */}
+              <TouchableOpacity
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    // Force camera view on web
+                    setCameraPermission('granted' as any);
+                  } else {
+                    handleOpenSettings();
+                  }
+                }}
+                className="bg-blue-50/50 p-6 rounded-2xl flex-row items-center border border-blue-100"
+              >
+                <View className="w-14 h-14 bg-primary-600 rounded-full items-center justify-center mr-4">
+                  <Ionicons name="camera" size={28} color="white" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xl font-bold text-primary-800">Tomar Foto</Text>
+                  <Text className="text-primary-600/70">Usa la cámara para capturar</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Galería Button */}
+              <TouchableOpacity
+                onPress={handlePickFromGallery}
+                className="bg-gray-50 p-6 rounded-2xl flex-row items-center border border-gray-100"
+              >
+                <View className="w-14 h-14 bg-gray-500 rounded-full items-center justify-center mr-4">
+                  <Ionicons name="images" size={28} color="white" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-xl font-bold text-gray-800">Seleccionar de Galería</Text>
+                  <Text className="text-gray-500">Elige una imagen existente</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View className="mt-8">
+              <Button title="Volver" variant="outline" onPress={() => router.back()} fullWidth />
+            </View>
+          </View>
         </View>
       </SafeAreaView>
     );
@@ -266,11 +388,7 @@ export default function CaptureScreen() {
       <SafeAreaView className="flex-1 bg-black">
         <View className="flex-1 p-4">
           <View className="flex-1 rounded-2xl overflow-hidden bg-gray-900">
-            <Image
-              source={{ uri: previewImage.uri }}
-              style={{ flex: 1 }}
-              resizeMode="contain"
-            />
+            <Image source={{ uri: previewImage.uri }} style={{ flex: 1 }} resizeMode="contain" />
           </View>
         </View>
 
@@ -317,10 +435,7 @@ export default function CaptureScreen() {
 
   // CAMERA SCREEN
   return (
-    <View
-      className="flex-1 bg-black"
-      onLayout={(e) => setScreenDimensions(e.nativeEvent.layout)}
-    >
+    <View className="flex-1 bg-black" onLayout={(e) => setScreenDimensions(e.nativeEvent.layout)}>
       <CameraView
         ref={cameraRef}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
@@ -391,6 +506,25 @@ export default function CaptureScreen() {
           onToggleFacing={toggleCameraFacing}
           onToggleMode={() => setCaptureMode(captureMode === 'auto' ? 'manual' : 'auto')}
         />
+
+        {/* Gallery button */}
+        <TouchableOpacity
+          onPress={handlePickFromGallery}
+          style={{
+            position: 'absolute',
+            bottom: 140,
+            right: 20,
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            borderRadius: 30,
+            width: 60,
+            height: 60,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Ionicons name="images" size={28} color="white" />
+          <Text style={{ color: 'white', fontSize: 10, marginTop: 2 }}>Galería</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );

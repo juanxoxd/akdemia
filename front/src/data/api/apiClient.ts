@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
+import { Platform } from 'react-native';
 import { ENV } from '../../config/env';
 
 // Custom error class for API errors
@@ -76,8 +77,15 @@ export const uploadFile = async (
 ): Promise<unknown> => {
   const config: AxiosRequestConfig = {
     headers: {
-      'Content-Type': 'multipart/form-data',
+      // On Web, we MUST set Content-Type to undefined.
+      // This forces the browser to set it to multipart/form-data
+      // AND include the crucial 'boundary' parameter.
+      ...(Platform.OS === 'web'
+        ? { 'Content-Type': undefined }
+        : { 'Content-Type': 'multipart/form-data' }),
     },
+    // Ensure axios doesn't try to stringify the FormData as JSON
+    transformRequest: [(data) => data],
     timeout: ENV.UPLOAD_TIMEOUT,
     onUploadProgress: (progressEvent) => {
       if (progressEvent.total && onProgress) {
@@ -97,7 +105,7 @@ export const withRetry = async <T>(
   maxAttempts: number = ENV.MAX_RETRY_ATTEMPTS
 ): Promise<T> => {
   let lastError: Error | undefined;
-  
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
@@ -106,18 +114,18 @@ export const withRetry = async <T>(
       if (ENV.ENABLE_LOGS) {
         console.log(`[Retry] Attempt ${attempt}/${maxAttempts} failed`);
       }
-      
+
       // Don't retry on client errors (4xx)
       if (error instanceof ApiError && error.statusCode >= 400 && error.statusCode < 500) {
         throw error;
       }
-      
+
       // Wait before retry (exponential backoff)
       if (attempt < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+        await new Promise((resolve) => setTimeout(resolve, Math.pow(2, attempt) * 1000));
       }
     }
   }
-  
+
   throw lastError;
 };
