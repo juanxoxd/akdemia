@@ -192,9 +192,11 @@ export class StudentsService {
     };
   }
 
-  async findOne(examId: string, studentId: string): Promise<StudentResponseDto> {
-    this.logger.log(`Finding student ${studentId} for exam ${examId}`);
+  async findOne(examId: string, studentIdOrCode: string): Promise<StudentResponseDto> {
+    this.logger.log(`Finding student ${studentIdOrCode} for exam ${examId}`);
 
+    const studentId = await this.resolveStudentId(studentIdOrCode);
+    
     const attempt = await this.attemptRepository.findOne({
       where: { examId, studentId },
       relations: ['student'],
@@ -209,11 +211,12 @@ export class StudentsService {
 
   async update(
     examId: string,
-    studentId: string,
+    studentIdOrCode: string,
     updateStudentDto: UpdateStudentDto,
   ): Promise<StudentResponseDto> {
-    this.logger.log(`Updating student ${studentId} for exam ${examId}`);
+    this.logger.log(`Updating student ${studentIdOrCode} for exam ${examId}`);
 
+    const studentId = await this.resolveStudentId(studentIdOrCode);
     const student = await this.studentRepository.findOne({ where: { id: studentId } });
 
     if (!student) {
@@ -228,9 +231,11 @@ export class StudentsService {
     return this.mapToResponseDto(updatedStudent);
   }
 
-  async remove(examId: string, studentId: string): Promise<void> {
-    this.logger.log(`Removing student ${studentId} from exam ${examId}`);
+  async remove(examId: string, studentIdOrCode: string): Promise<void> {
+    this.logger.log(`Removing student ${studentIdOrCode} from exam ${examId}`);
 
+    const studentId = await this.resolveStudentId(studentIdOrCode);
+    
     const attempt = await this.attemptRepository.findOne({
       where: { examId, studentId },
     });
@@ -244,9 +249,11 @@ export class StudentsService {
     this.logger.log(`Student ${studentId} removed from exam ${examId}`);
   }
 
-  async getResult(examId: string, studentId: string) {
-    this.logger.log(`Getting result for student ${studentId} in exam ${examId}`);
+  async getResult(examId: string, studentIdOrCode: string) {
+    this.logger.log(`Getting result for student ${studentIdOrCode} in exam ${examId}`);
 
+    const studentId = await this.resolveStudentId(studentIdOrCode);
+    
     const attempt = await this.attemptRepository.findOne({
       where: { examId, studentId },
       relations: ['student', 'answers'],
@@ -274,6 +281,30 @@ export class StudentsService {
         isCorrect: a.isCorrect,
       })) || [],
     };
+  }
+
+  /**
+   * Helper: Resolve student ID from UUID or student code
+   */
+  private async resolveStudentId(studentIdOrCode: string): Promise<string> {
+    // Check if it's a valid UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (uuidRegex.test(studentIdOrCode)) {
+      // It's a UUID, return as-is
+      return studentIdOrCode;
+    }
+    
+    // It's a student code, look up the student
+    const student = await this.studentRepository.findOne({
+      where: { code: studentIdOrCode },
+    });
+    
+    if (!student) {
+      throw new NotFoundException(`Student with code '${studentIdOrCode}' not found`);
+    }
+    
+    return student.id;
   }
 
   private mapToResponseDto(student: Student): StudentResponseDto {

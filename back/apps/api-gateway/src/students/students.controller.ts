@@ -78,10 +78,10 @@ export class StudentsController {
     return this.studentsService.findAllByExam(examId, query);
   }
 
-  @Get(':studentId')
-  @ApiOperation({ summary: 'Get student by ID' })
+  @Get(':studentIdOrCode')
+  @ApiOperation({ summary: 'Get student by ID or code' })
   @ApiParam({ name: 'examId', description: 'Exam ID' })
-  @ApiParam({ name: 'studentId', description: 'Student ID' })
+  @ApiParam({ name: 'studentIdOrCode', description: 'Student ID (UUID) or student code' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Student details',
@@ -89,9 +89,9 @@ export class StudentsController {
   })
   async findOne(
     @Param('examId', ParseUUIDPipe) examId: string,
-    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('studentIdOrCode') studentIdOrCode: string,
   ): Promise<StudentResponseDto> {
-    return this.studentsService.findOne(examId, studentId);
+    return this.studentsService.findOne(examId, studentIdOrCode);
   }
 
   @Put(':studentId')
@@ -105,10 +105,10 @@ export class StudentsController {
   })
   async update(
     @Param('examId', ParseUUIDPipe) examId: string,
-    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('studentId') studentIdOrCode: string,
     @Body() updateStudentDto: UpdateStudentDto,
   ): Promise<StudentResponseDto> {
-    return this.studentsService.update(examId, studentId, updateStudentDto);
+    return this.studentsService.update(examId, studentIdOrCode, updateStudentDto);
   }
 
   @Delete(':studentId')
@@ -119,23 +119,23 @@ export class StudentsController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Student removed' })
   async remove(
     @Param('examId', ParseUUIDPipe) examId: string,
-    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('studentId') studentIdOrCode: string,
   ): Promise<void> {
-    return this.studentsService.remove(examId, studentId);
+    return this.studentsService.remove(examId, studentIdOrCode);
   }
 
-  @Get(':studentId/result')
+  @Get(':studentIdOrCode/result')
   @ApiOperation({ summary: 'Get student exam result' })
   @ApiParam({ name: 'examId', description: 'Exam ID' })
-  @ApiParam({ name: 'studentId', description: 'Student ID' })
+  @ApiParam({ name: 'studentIdOrCode', description: 'Student ID (UUID) or student code' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Student exam result',
   })
   async getResult(
     @Param('examId', ParseUUIDPipe) examId: string,
-    @Param('studentId', ParseUUIDPipe) studentId: string,
+    @Param('studentIdOrCode') studentIdOrCode: string,
   ) {
-    return this.studentsService.getResult(examId, studentId);
+    return this.studentsService.getResult(examId, studentIdOrCode);
   }
 }
