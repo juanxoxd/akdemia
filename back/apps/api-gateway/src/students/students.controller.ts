@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -24,6 +25,7 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { BulkCreateStudentsDto } from './dto/bulk-create-students.dto';
 import { StudentResponseDto } from './dto/student-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { SearchStudentDto } from './dto/search-student.dto';
 
 @ApiTags('students')
 @ApiBearerAuth()
@@ -78,10 +80,28 @@ export class StudentsController {
     return this.studentsService.findAllByExam(examId, query);
   }
 
-  @Get(':studentIdOrCode')
-  @ApiOperation({ summary: 'Get student by ID or code' })
+  @Get('search')
+  @ApiOperation({ summary: 'Search students by criteria' })
   @ApiParam({ name: 'examId', description: 'Exam ID' })
-  @ApiParam({ name: 'studentIdOrCode', description: 'Student ID (UUID) or student code' })
+  @ApiQuery({ name: 'code', required: false, description: 'Student code' })
+  @ApiQuery({ name: 'name', required: false, description: 'Student name (partial match)' })
+  @ApiQuery({ name: 'email', required: false, description: 'Student email' })
+  @ApiQuery({ name: 'status', required: false, description: 'Processing status' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Search results',
+  })
+  async search(
+    @Param('examId', ParseUUIDPipe) examId: string,
+    @Query() searchDto: SearchStudentDto,
+  ) {
+    return this.studentsService.searchStudents(examId, searchDto);
+  }
+
+  @Get(':studentId')
+  @ApiOperation({ summary: 'Get student by ID' })
+  @ApiParam({ name: 'examId', description: 'Exam ID' })
+  @ApiParam({ name: 'studentId', description: 'Student ID' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Student details',
@@ -89,9 +109,9 @@ export class StudentsController {
   })
   async findOne(
     @Param('examId', ParseUUIDPipe) examId: string,
-    @Param('studentIdOrCode') studentIdOrCode: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
   ): Promise<StudentResponseDto> {
-    return this.studentsService.findOne(examId, studentIdOrCode);
+    return this.studentsService.findOne(examId, studentId);
   }
 
   @Put(':studentId')
@@ -105,10 +125,10 @@ export class StudentsController {
   })
   async update(
     @Param('examId', ParseUUIDPipe) examId: string,
-    @Param('studentId') studentIdOrCode: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
     @Body() updateStudentDto: UpdateStudentDto,
   ): Promise<StudentResponseDto> {
-    return this.studentsService.update(examId, studentIdOrCode, updateStudentDto);
+    return this.studentsService.update(examId, studentId, updateStudentDto);
   }
 
   @Delete(':studentId')
@@ -119,23 +139,24 @@ export class StudentsController {
   @ApiResponse({ status: HttpStatus.NO_CONTENT, description: 'Student removed' })
   async remove(
     @Param('examId', ParseUUIDPipe) examId: string,
-    @Param('studentId') studentIdOrCode: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
   ): Promise<void> {
-    return this.studentsService.remove(examId, studentIdOrCode);
+    return this.studentsService.remove(examId, studentId);
   }
 
-  @Get(':studentIdOrCode/result')
+  @Get(':studentId/result')
   @ApiOperation({ summary: 'Get student exam result' })
   @ApiParam({ name: 'examId', description: 'Exam ID' })
-  @ApiParam({ name: 'studentIdOrCode', description: 'Student ID (UUID) or student code' })
+  @ApiParam({ name: 'studentId', description: 'Student ID' })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Student exam result',
   })
   async getResult(
     @Param('examId', ParseUUIDPipe) examId: string,
-    @Param('studentIdOrCode') studentIdOrCode: string,
+    @Param('studentId', ParseUUIDPipe) studentId: string,
   ) {
-    return this.studentsService.getResult(examId, studentIdOrCode);
+    return this.studentsService.getResult(examId, studentId);
   }
 }
+
