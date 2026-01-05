@@ -7,6 +7,7 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { BulkCreateStudentsDto } from './dto/bulk-create-students.dto';
 import { StudentResponseDto } from './dto/student-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { SearchStudentDto } from './dto/search-student.dto';
 import { HTTP_MESSAGES, StudentStatus, ProcessingStatus } from '@omr/shared-types';
 
 @Injectable()
@@ -273,6 +274,49 @@ export class StudentsService {
         selectedOption: a.selectedOption,
         isCorrect: a.isCorrect,
       })) || [],
+    };
+  }
+
+  /**
+   * Search students by criteria
+   */
+  async searchStudents(examId: string, searchDto: SearchStudentDto) {
+    this.logger.log(`Searching students for exam ${examId} with criteria: ${JSON.stringify(searchDto)}`);
+
+    // Build query with joins
+    const queryBuilder = this.attemptRepository
+      .createQueryBuilder('attempt')
+      .leftJoinAndSelect('attempt.student', 'student')
+      .where('attempt.examId = :examId', { examId });
+
+    // Apply filters
+    if (searchDto.code) {
+      queryBuilder.andWhere('student.code = :code', { code: searchDto.code });
+    }
+
+    if (searchDto.name) {
+      queryBuilder.andWhere('student.fullName ILIKE :name', { name: `%${searchDto.name}%` });
+    }
+
+    if (searchDto.email) {
+      queryBuilder.andWhere('student.email = :email', { email: searchDto.email });
+    }
+
+    if (searchDto.status) {
+      queryBuilder.andWhere('attempt.status = :status', { status: searchDto.status });
+    }
+
+    const attempts = await queryBuilder.getMany();
+
+    return {
+      count: attempts.length,
+      items: attempts.map(attempt => ({
+        ...this.mapToResponseDto(attempt.student),
+        attemptId: attempt.id,
+        attemptStatus: attempt.status,
+        score: attempt.score,
+        processedAt: attempt.processedAt?.toISOString(),
+      })),
     };
   }
 

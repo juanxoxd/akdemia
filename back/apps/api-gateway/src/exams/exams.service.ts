@@ -155,13 +155,24 @@ export class ExamsService {
       : 0;
     const standardDeviation = Math.sqrt(variance);
 
+    // Calculate passing/failing students (passing = score >= 50% of total questions)
+    const passingThreshold = exam.totalQuestions * 0.5; // 50% to pass
+    const passedStudents = processedAttempts.filter((a: ExamAttempt) => Number(a.score) >= passingThreshold).length;
+    const failedStudents = processedStudents - passedStudents;
+    const passRate = processedStudents > 0 ? Math.round((passedStudents / processedStudents) * 100) : 0;
+
     // Calculate per-question statistics
     const questionStatistics = await this.calculateQuestionStatistics(id, exam.totalQuestions);
 
     return {
       examId: id,
+      examTitle: exam.title,
+      totalQuestions: exam.totalQuestions,
       totalStudents,
       processedStudents,
+      passedStudents,
+      failedStudents,
+      passRate,
       averageScore: Math.round(averageScore * 100) / 100,
       highestScore,
       lowestScore,

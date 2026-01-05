@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiParam,
   ApiBearerAuth,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { StudentsService } from './students.service';
 import { CreateStudentDto } from './dto/create-student.dto';
@@ -24,6 +25,7 @@ import { UpdateStudentDto } from './dto/update-student.dto';
 import { BulkCreateStudentsDto } from './dto/bulk-create-students.dto';
 import { StudentResponseDto } from './dto/student-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { SearchStudentDto } from './dto/search-student.dto';
 
 @ApiTags('students')
 @ApiBearerAuth()
@@ -76,6 +78,24 @@ export class StudentsController {
     @Query() query: PaginationQueryDto,
   ) {
     return this.studentsService.findAllByExam(examId, query);
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search students by criteria' })
+  @ApiParam({ name: 'examId', description: 'Exam ID' })
+  @ApiQuery({ name: 'code', required: false, description: 'Student code' })
+  @ApiQuery({ name: 'name', required: false, description: 'Student name (partial match)' })
+  @ApiQuery({ name: 'email', required: false, description: 'Student email' })
+  @ApiQuery({ name: 'status', required: false, description: 'Processing status' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Search results',
+  })
+  async search(
+    @Param('examId', ParseUUIDPipe) examId: string,
+    @Query() searchDto: SearchStudentDto,
+  ) {
+    return this.studentsService.searchStudents(examId, searchDto);
   }
 
   @Get(':studentId')
@@ -139,3 +159,4 @@ export class StudentsController {
     return this.studentsService.getResult(examId, studentId);
   }
 }
+
