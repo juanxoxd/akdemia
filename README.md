@@ -1,220 +1,155 @@
-# OMR Akdemia - Quick Start
+# OMR Scanner - Mobile App
 
-Sistema completo de reconocimiento óptico de marcas (OMR) con frontend, backend y procesamiento de imágenes.
+Aplicación móvil para escanear hojas ópticas de respuestas de exámenes mediante reconocimiento de marcas (OMR).
 
-## 📦 Estructura del Proyecto
+## Características
 
-```
-omr-akdemia/
-├── front/                      # Frontend Expo/React Native
-│   ├── Dockerfile
-│   └── README.md
-│
-├── back/                       # Backend NestJS (API Gateway)
-│   ├── Dockerfile.gateway
-│   └── README.md
-│
-├── omr-processor-service/      # Servicio Python (OMR Processing)
-│   ├── Dockerfile
-│   └── README.md
-│
-└── DEPLOY.md                   # ← Guía completa de despliegue
-```
+- 📷 Captura de imágenes con detección automática de esquinas
+- 🔄 Corrección de perspectiva en tiempo real
+- 📤 Envío al backend para procesamiento
+- 📊 Visualización de resultados con estadísticas
+- 💾 Persistencia local de datos del estudiante
 
-## 🚀 Deploy Rápido en Dokploy
+## Requisitos
 
-### Servicios a Crear (7 total)
+- Node.js 22+ LTS
+- npm o yarn
+- Expo CLI
+- iOS 13+ o Android 8.0+
 
-#### 1-4. Infraestructura (Docker Images)
+## Instalación
 
-```yaml
-1. PostgreSQL:    postgres:15-alpine         (Puerto: 5432)
-2. Redis:         redis:7-alpine             (Puerto: 6379)
-3. RabbitMQ:      rabbitmq:3-management-alpine (Puerto: 5672, 15672)
-4. MinIO:         minio/minio:latest         (Puerto: 9000, 9001)
+1. **Clonar el repositorio:**
+```bash
+cd omr-front
 ```
 
-#### 5. OMR Processor (Git)
+2. **Instalar dependencias:**
+```bash
+npm install
+```
 
-| Campo      | Valor                              |
-| ---------- | ---------------------------------- |
-| Build Path | `omr-processor-service`            |
-| Dockerfile | `omr-processor-service/Dockerfile` |
-| Puerto     | `8000`                             |
+3. **Configurar variables de entorno:**
+Crear archivo `.env` basado en `.env.example`:
+```bash
+cp .env.example .env
+```
 
-#### 6. API Gateway (Git)
+4. **Iniciar en modo desarrollo:**
+```bash
+npm start
+```
 
-| Campo      | Valor                     |
-| ---------- | ------------------------- |
-| Build Path | `back`                    |
-| Dockerfile | `back/Dockerfile.gateway` |
-| Puerto     | `3000`                    |
-
-#### 7. Frontend (Git)
-
-| Campo      | Valor              |
-| ---------- | ------------------ |
-| Build Path | `front`            |
-| Dockerfile | `front/Dockerfile` |
-| Puerto     | `8081`             |
-
----
-
-## ⚙️ Variables de Entorno
-
-### OMR Processor
+## Variables de Entorno
 
 ```env
-MINIO_ENDPOINT=omr-minio
-MINIO_SECRET_KEY=<password>
-RABBITMQ_URL=amqp://guest:<password>@omr-rabbitmq:5672/
+EXPO_PUBLIC_API_BASE_URL=http://localhost:3000/api
+EXPO_PUBLIC_ENABLE_LOGS=true
+EXPO_PUBLIC_MOCK_CAMERA=false
+EXPO_PUBLIC_POLLING_INTERVAL=2000
+EXPO_PUBLIC_MAX_POLLING_ATTEMPTS=30
 ```
 
-### API Gateway
+## Estructura del Proyecto
 
-```env
-DB_HOST=omr-postgres
-DB_PASSWORD=<password>
-REDIS_HOST=omr-redis
-OMR_PROCESSOR_URL=http://omr-processor:8000
-CORS_ORIGIN=https://api-akdmia.scairpgroup.com
+```
+omr-front/
+├── app/                    # Pantallas (Expo Router)
+│   ├── _layout.tsx         # Layout principal
+│   ├── index.tsx           # Lista de exámenes
+│   ├── exam/[examId].tsx   # Registro de estudiante
+│   ├── capture.tsx         # Captura de imagen
+│   ├── preview.tsx         # Vista previa
+│   └── results.tsx         # Resultados
+├── src/
+│   ├── config/             # Configuración
+│   ├── data/               # Capa de datos
+│   │   └── api/            # Clientes API
+│   ├── domain/             # Entidades del dominio
+│   │   └── entities/       # Interfaces TypeScript
+│   ├── presentation/       # Capa de presentación
+│   │   ├── components/     # Componentes React
+│   │   └── hooks/          # Custom hooks
+│   └── store/              # Estado global (Zustand)
+├── assets/                 # Assets estáticos
+├── app.json                # Configuración Expo
+└── package.json            # Dependencias
 ```
 
-### Frontend
-
-```env
-# Producción
-EXPO_PUBLIC_API_BASE_URL=https://api-akdmia.scairpgroup.com/api
-```
-
-> **Ver archivos `.env.example` en cada carpeta para la lista completa**
-
----
-
-## ✅ Verificación Rápida
+## Scripts Disponibles
 
 ```bash
-# Health checks
-curl https://api-akdmia.scairpgroup.com/api/health  # API Gateway
+# Desarrollo
+npm start             # Inicia Expo Dev Server
+npm run android       # Inicia en Android
+npm run ios           # Inicia en iOS
+npm run web           # Inicia en Web
 
-# MinIO: crear bucket 'omr-images'
-# Acceder a https://your-domain:9001
+# Testing y calidad
+npm test              # Ejecuta tests
+npm run lint          # Ejecuta ESLint
+npm run format        # Formatea código con Prettier
 ```
 
----
+## Módulos de la Aplicación
 
-## 🐳 Build Local (Testing)
+### Módulo 2: Gestión de Exámenes
+- Listado de exámenes activos
+- Selección de examen
+- Formulario de registro de estudiante
 
+### Módulo 3: Captura de Documento
+- Activación de cámara
+- Detección de esquinas en tiempo real
+- Overlay visual de detección
+- Captura manual y automática
+- Corrección de perspectiva
+
+### Módulo 4: Procesamiento y Envío
+- Validación de imagen
+- Compresión y optimización
+- Upload con progress bar
+- Manejo de errores y reintentos
+
+### Módulo 5: Resultados
+- Polling de resultados
+- Score con gráfico circular
+- Estadísticas por pregunta
+- Detalle de respuestas
+
+## Integración con Backend
+
+La aplicación se conecta a los siguientes endpoints:
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/exams` | Lista de exámenes |
+| POST | `/exams/:examId/students` | Registrar estudiante |
+| POST | `/processing/exams/:examId/students/:studentId/submit` | Subir hoja |
+| GET | `/processing/exams/:examId/students/:studentId/results` | Consultar resultados |
+
+## Tecnologías
+
+- **React Native** 0.73+ con TypeScript
+- **Expo SDK** 52+
+- **Expo Router** (navegación file-based)
+- **Zustand** (estado global)
+- **TanStack Query** (estado async)
+- **NativeWind** (TailwindCSS)
+- **Axios** (HTTP client)
+
+## Build para Producción
+
+### Android
 ```bash
-# OMR Processor
-cd omr-processor-service
-docker build -t omr-processor .
-
-# API Gateway
-cd back
-docker build -f Dockerfile.gateway -t api-gateway .
-
-# Frontend
-cd front
-docker build -t omr-frontend .
+npx eas build --platform android --profile production
 ```
 
----
-
-## 📚 Documentación Completa
-
-- **Guía de Despliegue**: [`DEPLOY.md`](./DEPLOY.md)
-- **Backend**: [`back/README.md`](./back/README.md)
-- **OMR Processor**: [`omr-processor-service/README.md`](./omr-processor-service/README.md)
-- **Frontend**: [`front/README.md`](./front/README.md)
-
----
-
-## 🔗 Enlaces Útiles
-
-| Servicio       | URL Local                      | Producción                             |
-| -------------- | ------------------------------ | -------------------------------------- |
-| API Gateway    | http://localhost:3000          | https://api-akdmia.scairpgroup.com     |
-| API Endpoints  | http://localhost:3000/api      | https://api-akdmia.scairpgroup.com/api |
-| API Docs       | http://localhost:3000/api/docs | (Solo dev)                             |
-| OMR Processor  | http://localhost:8000          | (Servicio interno)                     |
-| OMR Docs       | http://localhost:8000/docs     | (Solo dev)                             |
-| MinIO Console  | http://localhost:9001          | (Interno)                              |
-| RabbitMQ Admin | http://localhost:15672         | (Interno)                              |
-
----
-
-## 🛠️ Stack Tecnológico
-
-| Componente       | Tecnología                |
-| ---------------- | ------------------------- |
-| Frontend         | React Native + Expo       |
-| API Gateway      | NestJS + TypeScript       |
-| OMR Processing   | Python + FastAPI + OpenCV |
-| Base de Datos    | PostgreSQL 15             |
-| Cache            | Redis 7                   |
-| Queue            | RabbitMQ 3                |
-| Storage          | MinIO (S3-compatible)     |
-| Containerización | Docker                    |
-| Deploy           | Dokploy                   |
-
----
-
-## ⚡ Comandos Rápidos
-
+### iOS
 ```bash
-# Ver logs de un servicio en Docker
-docker logs -f <container-name>
-
-# Conectar a PostgreSQL
-docker exec -it <postgres-container> psql -U postgres -d omr_db
-
-# Ver estado de todos los contenedores
-docker ps
-
-# Limpiar builds
-docker system prune -af
-
-# Rebuild forzado
-docker build --no-cache -t <image-name> .
+npx eas build --platform ios --profile production
 ```
 
----
+## Licencia
 
-## 🐛 Problemas Comunes
-
-| Error                      | Solución                                   |
-| -------------------------- | ------------------------------------------ |
-| Cannot connect to database | Verificar `DB_HOST` y `DB_PASSWORD`        |
-| MinIO bucket not found     | Crear bucket `omr-images` en console       |
-| CORS error                 | Configurar `CORS_ORIGIN` en API Gateway    |
-| Build fails                | Verificar `Build Path` y `Dockerfile Path` |
-| Services can't communicate | Verificar que estén en la misma red        |
-
-**Ver [`DEPLOY.md`](./DEPLOY.md#troubleshooting) para troubleshooting detallado**
-
----
-
-## 📊 Requisitos Mínimos
-
-- **CPU**: 4 cores
-- **RAM**: 4GB
-- **Disco**: 50GB
-- **Docker**: 20.10+
-- **Dokploy**: Latest
-
----
-
-## 🔐 Seguridad
-
-- ✅ Cambiar todas las contraseñas por defecto
-- ✅ Usar HTTPS en producción
-- ✅ Configurar CORS correctamente
-- ✅ No exponer puertos de infraestructura
-- ✅ Backups programados
-
----
-
-**Listo para empezar!** 🎉
-
-Ver [`DEPLOY.md`](./DEPLOY.md) para instrucciones paso a paso completas.
+MIT
