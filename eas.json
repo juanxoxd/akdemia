@@ -29,6 +29,13 @@
         "EXPO_PUBLIC_MOCK_API": "true",
         "EXPO_PUBLIC_ENABLE_LOGS": "false"
       }
+    },
+    "preview-production": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
     }
   },
   "submit": {

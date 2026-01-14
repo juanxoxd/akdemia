@@ -53,6 +53,14 @@
           "photosPermission": "Allow OMR Scanner to access your photos to select answer sheets"
         }
       ],
+      [
+        "react-native-vision-camera",
+        {
+          "cameraPermissionText": "$(PRODUCT_NAME) needs access to your Camera to scan answer sheets",
+          "enableFrameProcessors": true,
+          "enableCodeScanner": false
+        }
+      ],
       "expo-asset"
     ],
     "experiments": {

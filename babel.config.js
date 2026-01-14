@@ -6,6 +6,8 @@ module.exports = function (api) {
       "nativewind/babel",
     ],
     plugins: [
+      // Worklets debe ir primero para frame processors de vision-camera
+      ["react-native-worklets-core/plugin"],
       "react-native-reanimated/plugin",
     ],
   };

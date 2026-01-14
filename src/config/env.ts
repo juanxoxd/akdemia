@@ -30,6 +30,11 @@ export const ENV: { [key: string]: string | number | boolean } & {
   JPEG_QUALITY: number;
   MIN_IMAGE_WIDTH: number;
   MIN_IMAGE_HEIGHT: number;
+  // OpenCV Detection
+  DETECTION_FPS: number;
+  MIN_CONTOUR_AREA_RATIO: number;
+  MAX_CONTOUR_AREA_RATIO: number;
+  BLUR_THRESHOLD: number;
 } = {
   // API Configuration
   API_BASE_URL: process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000/api',
@@ -75,8 +80,15 @@ export const ENV: { [key: string]: string | number | boolean } & {
   JPEG_QUALITY: 0.9,
   MIN_IMAGE_WIDTH: 800,
   MIN_IMAGE_HEIGHT: 600,
+  
+  // OpenCV Detection Configuration
+  DETECTION_FPS: 4,                    // Frames por segundo a procesar
+  MIN_CONTOUR_AREA_RATIO: 0.15,        // Área mínima del contorno (% del frame)
+  MAX_CONTOUR_AREA_RATIO: 0.85,        // Área máxima del contorno
+  BLUR_THRESHOLD: 100,                 // Umbral de Laplacian variance
 };
 
 export type Environment = typeof ENV;
+
 
 
