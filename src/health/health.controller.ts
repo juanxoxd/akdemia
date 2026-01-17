@@ -1,4 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import {
   HealthCheck,
@@ -10,7 +11,10 @@ import { APP_CONSTANTS } from '@omr/shared-types';
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
-  constructor(private health: HealthCheckService) {}
+  constructor(
+    private health: HealthCheckService,
+    private configService: ConfigService,
+  ) {}
 
   @Get()
   @HealthCheck()
@@ -31,6 +35,26 @@ export class HealthController {
       description: APP_CONSTANTS.DESCRIPTION,
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
+    };
+  }
+
+  @Get('license')
+  @ApiOperation({ summary: 'Check application license status' })
+  @ApiResponse({ status: 200, description: 'License status' })
+  getLicenseStatus() {
+    const isEnabled = this.configService.get<string>('APP_ENABLED') !== 'false';
+    
+    if (!isEnabled) {
+        throw new ServiceUnavailableException({
+            status: 'suspended',
+            message: 'Application license is suspended. Please contact administrator.',
+        });
+    }
+
+    return {
+      status: 'active',
+      enabled: true,
+      timestamp: new Date().toISOString(),
     };
   }
 }
