@@ -37,22 +37,20 @@ async function bootstrap() {
   );
   logger.log(`🌍 Environment: ${nodeEnv}`);
   // Swagger documentation
-  if (nodeEnv !== 'production') {
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle(APP_CONSTANTS.NAME)
-      .setDescription(APP_CONSTANTS.DESCRIPTION)
-      .setVersion(APP_CONSTANTS.VERSION)
-      .addBearerAuth()
-      .addTag('exams', 'Exam management endpoints')
-      .addTag('students', 'Student management endpoints')
-      .addTag('processing', 'OMR processing endpoints')
-      .addTag('health', 'Health check endpoints')
-      .build();
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle(APP_CONSTANTS.NAME)
+    .setDescription(APP_CONSTANTS.DESCRIPTION)
+    .setVersion(APP_CONSTANTS.VERSION)
+    .addBearerAuth()
+    .addTag('exams', 'Exam management endpoints')
+    .addTag('students', 'Student management endpoints')
+    .addTag('processing', 'OMR processing endpoints')
+    .addTag('health', 'Health check endpoints')
+    .build();
 
-    const document = SwaggerModule.createDocument(app, swaggerConfig);
-    SwaggerModule.setup('api/docs', app, document);
-    logger.log(`📚 Swagger documentation available at /api/docs`);
-  }
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
+  logger.log(`📚 Swagger documentation available at /api/docs`);
 
   await app.listen(port);
   logger.log(`🚀 ${APP_CONSTANTS.NAME} is running on port ${port}`);
