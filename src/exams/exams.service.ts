@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Exam, ExamAttempt, Answer } from '@omr/database';
@@ -7,6 +7,7 @@ import { UpdateExamDto } from './dto/update-exam.dto';
 import { ExamResponseDto } from './dto/exam-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { HTTP_MESSAGES, ExamStatus, ProcessingStatus } from '@omr/shared-types';
+import { ExamMapper } from './mappers/exam.mapper';
 
 @Injectable()
 export class ExamsService {
@@ -24,19 +25,21 @@ export class ExamsService {
   async create(createExamDto: CreateExamDto): Promise<ExamResponseDto> {
     this.logger.log(`Creating exam: ${createExamDto.examTitle}`);
 
-    const exam = this.examRepository.create({
-      title: createExamDto.examTitle,
-      description: createExamDto.description,
-      totalQuestions: createExamDto.totalQuestions,
-      answersPerQuestion: createExamDto.answersPerQuestion,
-      examDate: new Date(createExamDto.examDate),
-      status: ExamStatus.DRAFT,
-    });
+    // Validate answers count
+    if (createExamDto.answers.length !== createExamDto.totalQuestions) {
+        throw new BadRequestException(
+            `Number of answers (${createExamDto.answers.length}) does not match total questions (${createExamDto.totalQuestions})`
+        );
+    }
+
+    const exam = this.examRepository.create(
+      ExamMapper.toCreatePersistence(createExamDto),
+    );
 
     const savedExam = await this.examRepository.save(exam);
     this.logger.log(`Exam created with ID: ${savedExam.id}`);
 
-    return this.mapToResponseDto(savedExam);
+    return ExamMapper.toPresentation(ExamMapper.toDomain(savedExam));
   }
 
   async findAll(query: PaginationQueryDto) {
@@ -55,7 +58,7 @@ export class ExamsService {
     const totalPages = Math.ceil(totalItems / limit);
 
     return {
-      items: items.map(exam => this.mapToResponseDto(exam)),
+      items: items.map(exam => ExamMapper.toPresentation(ExamMapper.toDomain(exam))),
       meta: {
         totalItems,
         itemCount: items.length,
@@ -80,7 +83,7 @@ export class ExamsService {
       throw new NotFoundException(HTTP_MESSAGES.NOT_FOUND);
     }
 
-    return this.mapToResponseDto(exam);
+    return ExamMapper.toPresentation(ExamMapper.toDomain(exam));
   }
 
   async update(id: string, updateExamDto: UpdateExamDto): Promise<ExamResponseDto> {
@@ -100,7 +103,7 @@ export class ExamsService {
     if (updateExamDto.examDate) exam.examDate = new Date(updateExamDto.examDate);
 
     const updatedExam = await this.examRepository.save(exam);
-    return this.mapToResponseDto(updatedExam);
+    return ExamMapper.toPresentation(ExamMapper.toDomain(updatedExam));
   }
 
   async remove(id: string): Promise<void> {
@@ -250,26 +253,6 @@ export class ExamsService {
     exam.status = ExamStatus.ACTIVE;
 
     const savedExam = await this.examRepository.save(exam);
-    return this.mapToResponseDto(savedExam);
-  }
-
-  private mapToResponseDto(exam: Exam): ExamResponseDto {
-    const studentCount = exam.attempts?.length || 0;
-    const processedCount = exam.attempts?.filter((a: ExamAttempt) => a.processedAt !== null).length || 0;
-
-    return {
-      id: exam.id,
-      title: exam.title,
-      description: exam.description,
-      totalQuestions: exam.totalQuestions,
-      answersPerQuestion: exam.answersPerQuestion,
-      examDate: exam.examDate instanceof Date ? exam.examDate.toISOString().split('T')[0] : String(exam.examDate),
-      status: exam.status,
-      hasAnswerKey: !!exam.answerKey,
-      studentCount,
-      processedCount,
-      createdAt: exam.createdAt.toISOString(),
-      updatedAt: exam.updatedAt.toISOString(),
-    };
+    return ExamMapper.toPresentation(ExamMapper.toDomain(savedExam));
   }
 }

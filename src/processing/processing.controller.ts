@@ -93,6 +93,7 @@ export class ProcessingController {
       body.imageKey,
       body.answers,
       body.totalQuestions,
+      body.score,
     );
   }
 

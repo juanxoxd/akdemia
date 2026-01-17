@@ -165,6 +165,13 @@ export class SubmitStudentScanDto {
   })
   @IsInt()
   totalQuestions: number;
+
+  @ApiPropertyOptional({
+    description: 'Score calculated by the client/frontend',
+    example: 18.5,
+  })
+  @IsOptional()
+  score?: number;
 }
 
 export class GetExamResultsDto {

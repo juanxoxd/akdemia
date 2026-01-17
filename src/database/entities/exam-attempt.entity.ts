@@ -55,6 +55,9 @@ export class ExamAttempt extends BaseEntity {
   @Column({ name: 'confidence_score', type: 'decimal', precision: 5, scale: 4, nullable: true })
   confidenceScore?: number;
 
+  @Column({ name: 'client_score', type: 'decimal', precision: 5, scale: 2, nullable: true })
+  clientScore?: number;
+
   @ManyToOne(() => Exam, exam => exam.attempts, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'exam_id' })
   exam!: Exam;

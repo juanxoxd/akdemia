@@ -8,7 +8,10 @@ import {
   IsDateString,
   IsOptional,
   MaxLength,
+  IsArray,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { PROCESSING_CONSTANTS } from '@omr/shared-types';
 
 export class CreateExamDto {
@@ -59,4 +62,26 @@ export class CreateExamDto {
   })
   @IsDateString()
   examDate: string;
+
+  @ApiProperty({
+    description: 'List of correct answers (Answer Key)',
+    example: [
+      { questionNumber: 1, correctOption: 0, confidenceScore: 1 },
+      { questionNumber: 2, correctOption: 2, confidenceScore: 1 }
+    ],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateAnswerDto)
+  answers: CreateAnswerDto[];
+}
+
+export class CreateAnswerDto {
+  @IsInt()
+  @Min(1)
+  questionNumber: number;
+
+  @IsInt()
+  @Min(0)
+  correctOption: number;
 }

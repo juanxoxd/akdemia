@@ -9,6 +9,7 @@ import { StudentResponseDto } from './dto/student-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { SearchStudentDto } from './dto/search-student.dto';
 import { HTTP_MESSAGES, StudentStatus, ProcessingStatus } from '@omr/shared-types';
+import { StudentMapper } from './mappers/student.mapper';
 
 @Injectable()
 export class StudentsService {
@@ -71,7 +72,7 @@ export class StudentsService {
     });
     await this.attemptRepository.save(attempt);
 
-    return this.mapToResponseDto(student);
+    return StudentMapper.toPresentation(StudentMapper.toDomain(student));
   }
 
   async bulkRegisterStudents(examId: string, bulkDto: BulkCreateStudentsDto) {
@@ -171,13 +172,17 @@ export class StudentsService {
 
     const totalPages = Math.ceil(totalItems / limit);
 
-    const items = attempts.map(attempt => ({
-      ...this.mapToResponseDto(attempt.student),
-      attemptId: attempt.id,
-      attemptStatus: attempt.status,
-      score: attempt.score,
-      processedAt: attempt.processedAt?.toISOString(),
-    }));
+    const items = attempts.map(attempt => {
+        const studentDomain = StudentMapper.toDomain(attempt.student);
+        const studentDto = StudentMapper.toPresentation(studentDomain);
+        return {
+            ...studentDto,
+            attemptId: attempt.id,
+            attemptStatus: attempt.status,
+            score: attempt.score,
+            processedAt: attempt.processedAt?.toISOString(),
+        }
+    });
 
     return {
       items,
@@ -205,7 +210,7 @@ export class StudentsService {
       throw new NotFoundException(HTTP_MESSAGES.NOT_FOUND);
     }
 
-    return this.mapToResponseDto(attempt.student);
+    return StudentMapper.toPresentation(StudentMapper.toDomain(attempt.student));
   }
 
   async update(
@@ -226,7 +231,7 @@ export class StudentsService {
     if (updateStudentDto.email !== undefined) student.email = updateStudentDto.email;
 
     const updatedStudent = await this.studentRepository.save(student);
-    return this.mapToResponseDto(updatedStudent);
+    return StudentMapper.toPresentation(StudentMapper.toDomain(updatedStudent));
   }
 
   async remove(examId: string, studentId: string): Promise<void> {
@@ -257,11 +262,13 @@ export class StudentsService {
       throw new NotFoundException(HTTP_MESSAGES.NOT_FOUND);
     }
 
+    const studentDomain = StudentMapper.toDomain(attempt.student);
+
     return {
       examId,
       studentId,
       attemptId: attempt.id,
-      student: this.mapToResponseDto(attempt.student),
+      student: StudentMapper.toPresentation(studentDomain),
       status: attempt.status,
       score: attempt.score,
       totalCorrect: attempt.totalCorrect,
@@ -310,25 +317,17 @@ export class StudentsService {
 
     return {
       count: attempts.length,
-      items: attempts.map(attempt => ({
-        ...this.mapToResponseDto(attempt.student),
-        attemptId: attempt.id,
-        attemptStatus: attempt.status,
-        score: attempt.score,
-        processedAt: attempt.processedAt?.toISOString(),
-      })),
-    };
-  }
-
-  private mapToResponseDto(student: Student): StudentResponseDto {
-    return {
-      id: student.id,
-      code: student.code,
-      fullName: student.fullName,
-      email: student.email,
-      status: student.status,
-      createdAt: student.createdAt.toISOString(),
-      updatedAt: student.updatedAt.toISOString(),
+      items: attempts.map(attempt => {
+        const studentDomain = StudentMapper.toDomain(attempt.student);
+        const studentDto = StudentMapper.toPresentation(studentDomain);
+        return {
+            ...studentDto,
+            attemptId: attempt.id,
+            attemptStatus: attempt.status,
+            score: attempt.score,
+            processedAt: attempt.processedAt?.toISOString(),
+        }
+      }),
     };
   }
 }

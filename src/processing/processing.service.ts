@@ -11,6 +11,7 @@ import {
   AnswerStatus,
 } from '@omr/shared-types';
 import { DetectedAnswerDto } from './dto/processing.dto';
+import { ExamAttemptMapper } from './mappers/exam-attempt.mapper';
 
 @Injectable()
 export class ProcessingService {
@@ -120,6 +121,7 @@ export class ProcessingService {
     imageKey: string,
     answers: DetectedAnswerDto[],
     _totalQuestions: number,
+    clientScore?: number,
   ) {
     this.logger.log(`Procesando scan de estudiante ${studentId} para examen ${examId}`);
 
@@ -212,6 +214,7 @@ export class ProcessingService {
     attempt.imageUrl = imageKey; // GUARDAMOS EL KEY DIRECTAMENTE
     
     attempt.score = rawScore;
+    attempt.clientScore = clientScore; // Guardar puntaje del front
     attempt.totalCorrect = totalCorrect;
     attempt.totalIncorrect = totalIncorrect;
     attempt.totalBlank = totalBlank;
@@ -272,24 +275,13 @@ export class ProcessingService {
   async getProcessingResult(examId: string, studentId: string) {
     const attempt = await this.attemptRepository.findOne({
       where: { examId, studentId },
-      relations: ['student'],
+      relations: ['student', 'answers'],
     });
 
     if (!attempt) throw new NotFoundException('Result not found');
 
-    const answers = await this.answerRepository.find({
-      where: { attemptId: attempt.id },
-      order: { questionNumber: 'ASC' },
-    });
-
-    return {
-      ...attempt,
-      answers: answers.map((a: Answer) => ({
-        questionNumber: a.questionNumber,
-        selectedOption: a.selectedOption,
-        isCorrect: a.isCorrect,
-      })),
-    };
+    // Use Mapper
+    return ExamAttemptMapper.toPresentation(ExamAttemptMapper.toDomain(attempt));
   }
 
   async getExamResults(examId: string, page: number, limit: number, sortOrder: 'ASC' | 'DESC') {
@@ -298,12 +290,12 @@ export class ProcessingService {
       order: { score: sortOrder },
       skip: (page - 1) * limit,
       take: limit,
-      relations: ['student'],
+      relations: ['student', 'answers'],
     });
 
     const results = await Promise.all(
       attempts.map(async (attempt) => {
-        let imageUrl: string | null = null;
+        let signedImageUrl: string | undefined = undefined;
         if (attempt.imageUrl) {
           try {
              // Reutilizamos lógica de presigned simple
@@ -312,22 +304,14 @@ export class ProcessingService {
              if (key.includes(bucketUrlPart)) {
                key = key.split(bucketUrlPart)[1];
              }
-             imageUrl = await this.s3Service.getPresignedUrl(key);
+             signedImageUrl = await this.s3Service.getPresignedUrl(key);
           } catch (e: any) {
              this.logger.warn(`No se pudo firmar URL para attempt ${attempt.id}`);
           }
         }
 
-        return {
-          attemptId: attempt.id,
-          student: attempt.student, // Asumimos que incluimos datos del estudiante
-          score: attempt.score,
-          totalCorrect: attempt.totalCorrect,
-          totalIncorrect: attempt.totalIncorrect,
-          totalBlank: attempt.totalBlank,
-          processedAt: attempt.processedAt,
-          imageUrl: imageUrl, // Evidencia
-        };
+        const domain = ExamAttemptMapper.toDomain(attempt);
+        return ExamAttemptMapper.toPresentation(domain, signedImageUrl);
       }),
     );
 
