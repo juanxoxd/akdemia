@@ -56,26 +56,10 @@ services:
   # ===========================================
   # RabbitMQ Message Broker
   # ===========================================
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: omr-rabbitmq
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
-    ports:
-      - "${RABBITMQ_PORT:-5672}:5672"
-      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
-    volumes:
-      - rabbitmq-data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - omr-network
-
+  # ===========================================
+  # RabbitMQ - REMOVED (Frontend OMR Architecture)
+  # ===========================================
+  
   # ===========================================
   # MinIO Object Storage (S3 Compatible)
   # ===========================================
@@ -120,11 +104,11 @@ services:
       - omr-network
 
   # ===========================================
-  # API Gateway (NestJS) - Solo con profile 'full'
+  # API Gateway (NestJS)
   # ===========================================
   api-gateway:
     build:
-      context: ../apps/api-gateway
+      context: ../
       dockerfile: Dockerfile
     container_name: omr-api-gateway
     restart: unless-stopped
@@ -138,52 +122,17 @@ services:
       DB_DATABASE: ${DB_DATABASE:-omr_db}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672
       MINIO_ENDPOINT: minio
       MINIO_PORT: 9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_BUCKET: ${MINIO_BUCKET:-omr-images}
-      OMR_PROCESSOR_URL: http://omr-processor:8000
     ports:
       - "${API_GATEWAY_PORT:-3000}:3000"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
-    networks:
-      - omr-network
-    profiles:
-      - full
-
-  # ===========================================
-  # OMR Processor (Python/FastAPI) - Solo con profile 'full'
-  # ===========================================
-  omr-processor:
-    build:
-      context: ../apps/omr-processor
-      dockerfile: Dockerfile
-    container_name: omr-omr-processor
-    restart: unless-stopped
-    environment:
-      ENVIRONMENT: ${NODE_ENV:-development}
-      HOST: 0.0.0.0
-      PORT: 8000
-      MINIO_ENDPOINT: minio
-      MINIO_PORT: 9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
-      MINIO_BUCKET: ${MINIO_BUCKET:-omr-images}
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
-    ports:
-      - "${OMR_PROCESSOR_PORT:-8000}:8000"
-    depends_on:
-      rabbitmq:
         condition: service_healthy
       minio:
         condition: service_healthy
