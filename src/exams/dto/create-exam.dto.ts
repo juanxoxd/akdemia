@@ -77,10 +77,12 @@ export class CreateExamDto {
 }
 
 export class CreateAnswerDto {
+  @ApiProperty({ description: 'Question number (1-based)', example: 1 })
   @IsInt()
   @Min(1)
   questionNumber: number;
 
+  @ApiProperty({ description: 'Correct option index (0-based: 0=A, 1=B, etc.)', example: 0 })
   @IsInt()
   @Min(0)
   correctOption: number;

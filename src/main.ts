@@ -35,7 +35,7 @@ async function bootstrap() {
       },
     }),
   );
-
+  logger.log(`🌍 Environment: ${nodeEnv}`);
   // Swagger documentation
   if (nodeEnv !== 'production') {
     const swaggerConfig = new DocumentBuilder()
