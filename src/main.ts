@@ -42,10 +42,10 @@ async function bootstrap() {
     .setDescription(APP_CONSTANTS.DESCRIPTION)
     .setVersion(APP_CONSTANTS.VERSION)
     .addBearerAuth()
-    .addTag('exams', 'Exam management endpoints')
-    .addTag('students', 'Student management endpoints')
-    .addTag('processing', 'OMR processing endpoints')
-    .addTag('health', 'Health check endpoints')
+    .addTag('Exams', 'Exam management endpoints')
+    .addTag('Students', 'Student management endpoints')
+    .addTag('Processing', 'OMR processing endpoints')
+    .addTag('Health', 'Health check endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

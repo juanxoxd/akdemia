@@ -63,7 +63,9 @@ export class ExamMapper {
     dto.status = domain.status;
     dto.createdAt = domain.createdAt instanceof Date ? domain.createdAt.toISOString() : String(domain.createdAt);
     dto.updatedAt = domain.updatedAt instanceof Date ? domain.updatedAt.toISOString() : String(domain.updatedAt);
-    // Map answer key info if needed or leave out restricted fields
+    
+    dto.answers = domain.answerKey.answers || [];
+    
     return dto;
   }
 }

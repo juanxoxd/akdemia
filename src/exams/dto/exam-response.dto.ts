@@ -36,4 +36,10 @@ export class ExamResponseDto {
 
   @ApiProperty({ example: '2025-12-01T10:00:00.000Z' })
   updatedAt: string;
+
+  @ApiPropertyOptional({
+    description: 'Answer key (correct options)',
+    example: [{ questionNumber: 1, correctOption: 0 }]
+  })
+  answers?: any[];
 }
