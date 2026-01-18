@@ -78,7 +78,7 @@ export class ExamsController {
     @UploadedFile(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({
-          fileType: '.(xlsx|xls|csv)', // Regex for extension or mime type
+          fileType: /(spreadsheet|excel|csv|vnd.openxmlformats-officedocument.spreadsheetml.sheet)/, 
         })
         .addMaxSizeValidator({
           maxSize: 1024 * 1024 * 10, // 10MB
