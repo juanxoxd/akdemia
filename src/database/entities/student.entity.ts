@@ -12,11 +12,11 @@ import { ExamAttempt } from './exam-attempt.entity';
 export class Student extends BaseEntity {
   @Column({ length: 50, unique: true })
   @Index()
-  code!: string;
+  code: string;
 
   @Column({ name: 'full_name', length: 255 })
   @Index()
-  fullName!: string;
+  fullName: string;
 
   @Column({ length: 255, nullable: true })
   email?: string;
@@ -26,7 +26,7 @@ export class Student extends BaseEntity {
     enum: StudentStatus,
     default: StudentStatus.REGISTERED,
   })
-  status!: StudentStatus;
+  status: StudentStatus;
 
   @OneToMany(() => ExamAttempt, attempt => attempt.student)
   attempts!: ExamAttempt[];
