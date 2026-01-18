@@ -69,7 +69,7 @@ export class UploadExamStudentsCommandHandler
     this.excelPort.validateValuesByColumn(rows, 'FULL_NAME');
     this.excelPort.validateDuplicatesByColumn(rows, 'CODE');
 
-    this.logger.debug(`Rows to process: ${rows.length}`);
+    this.logger.log(`Rows to process: ${rows.length}`);
 
     // 3. Store in Redis
     const timestamp = Date.now();

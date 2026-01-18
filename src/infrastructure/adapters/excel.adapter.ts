@@ -67,7 +67,7 @@ export class ExcelAdapter implements ExcelPort {
   }
 
   validateHeaders(headers: string[], headersReceived: string[]): void {
-    this.logger.debug(`Validating headers: ${headers.join(', ')}. Received: ${headersReceived.join(', ')}`);
+    this.logger.log(`Validating headers: ${headers.join(', ')}. Received: ${headersReceived.join(', ')}`);
     if (
       headers.length !== headersReceived.length ||
       !headers.every(

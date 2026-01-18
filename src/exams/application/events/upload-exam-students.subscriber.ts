@@ -119,7 +119,7 @@ export class UploadExamStudentsSubscriber {
         await this.examAttemptRepository.save(attempt);
         this.logger.log(`Enrolled student ${student.code} in exam ${examId}`);
     } else {
-        this.logger.debug(`Student ${student.code} already enrolled in exam ${examId}`);
+        this.logger.log(`Student ${student.code} already enrolled in exam ${examId}`);
     }
   }
 }
