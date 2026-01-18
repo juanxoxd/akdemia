@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
+import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UploadExamStudentsEvent } from '../../domain/events/upload-exam-students.event';
@@ -16,7 +16,8 @@ interface ProcessedExamStudentRow {
 }
 
 @Injectable()
-export class UploadExamStudentsSubscriber {
+@EventsHandler(UploadExamStudentsEvent)
+export class UploadExamStudentsSubscriber implements IEventHandler<UploadExamStudentsEvent> {
   private readonly logger = new Logger(UploadExamStudentsSubscriber.name);
   constructor(
     @Inject(RedisRepository)
@@ -29,8 +30,7 @@ export class UploadExamStudentsSubscriber {
     private readonly examRepository: Repository<Exam>,
   ) {}
 
-  @OnEvent(UploadExamStudentsEvent.name)
-  async handleUploadExamStudentsEvent(event: UploadExamStudentsEvent): Promise<void> {
+  async handle(event: UploadExamStudentsEvent): Promise<void> {
     const { examId, redisKey } = event;
 
     try {
