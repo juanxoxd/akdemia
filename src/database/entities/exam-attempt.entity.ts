@@ -23,8 +23,8 @@ export class ExamAttempt extends BaseEntity {
   @Column({ name: 'student_id', type: 'uuid' })
   studentId!: string;
 
-  @Column({ name: 'image_url', length: 500 })
-  imageUrl!: string;
+  @Column({ name: 'image_url', length: 500, nullable: true })
+  imageUrl?: string;
 
   @Column({ name: 'processed_image_url', length: 500, nullable: true })
   processedImageUrl?: string;

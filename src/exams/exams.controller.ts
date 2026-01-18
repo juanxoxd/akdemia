@@ -10,7 +10,13 @@ import {
   ParseUUIDPipe,
   HttpStatus,
   HttpCode,
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipeBuilder,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CommandBus } from '@nestjs/cqrs';
+import { UploadExamStudentsCommand } from './application/commands/upload-exam-students.command';
 import {
   ApiTags,
   ApiOperation,
@@ -23,12 +29,16 @@ import { CreateExamDto } from './dto/create-exam.dto';
 import { UpdateExamDto } from './dto/update-exam.dto';
 import { ExamResponseDto } from './dto/exam-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
+import { ApiConsumes, ApiBody } from '@nestjs/swagger';
 
 @ApiTags('exams')
 @ApiBearerAuth()
 @Controller('exams')
 export class ExamsController {
-  constructor(private readonly examsService: ExamsService) {}
+  constructor(
+    private readonly examsService: ExamsService,
+    private readonly commandBus: CommandBus,
+  ) {}
 
   @Post('start')
   @HttpCode(HttpStatus.CREATED)
@@ -41,6 +51,47 @@ export class ExamsController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Invalid input' })
   async createExam(@Body() createExamDto: CreateExamDto): Promise<ExamResponseDto> {
     return this.examsService.create(createExamDto);
+  }
+
+  @Post(':id/students/upload')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Upload students to exam via Excel' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Students uploaded successfully',
+  })
+  async uploadStudents(
+    @Param('id', ParseUUIDPipe) id: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: '.(xlsx|xls|csv)', // Regex for extension or mime type
+        })
+        .addMaxSizeValidator({
+          maxSize: 1024 * 1024 * 10, // 10MB
+        })
+        .build({
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    )
+    file: Express.Multer.File,
+  ) {
+    return this.commandBus.execute(
+      new UploadExamStudentsCommand({ content: file.buffer }, id),
+    );
   }
 
   @Get()

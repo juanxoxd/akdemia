@@ -206,6 +206,7 @@ export class StudentsService {
     const attempt = await this.attemptRepository.findOne({
       where: { examId, studentId },
       relations: ['student'],
+      order: { createdAt: 'DESC' }
     });
 
     if (!attempt) {
