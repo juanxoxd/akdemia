@@ -6,9 +6,13 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { APP_CONSTANTS } from '@omr/shared-types';
 
+import { CustomLogger } from './infrastructure/adapters/custom.logger';
+
 async function bootstrap() {
+  const app = await NestFactory.create(AppModule, {
+    logger: new CustomLogger(),
+  });
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3000);
@@ -42,10 +46,10 @@ async function bootstrap() {
     .setDescription(APP_CONSTANTS.DESCRIPTION)
     .setVersion(APP_CONSTANTS.VERSION)
     .addBearerAuth()
-    .addTag('Exams', 'Exam management endpoints')
-    .addTag('Students', 'Student management endpoints')
-    .addTag('Processing', 'OMR processing endpoints')
-    .addTag('Health', 'Health check endpoints')
+    .addTag('exams', 'Exam management endpoints')
+    .addTag('students', 'Student management endpoints')
+    .addTag('processing', 'OMR processing endpoints')
+    .addTag('health', 'Health check endpoints')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
