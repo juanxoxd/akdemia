@@ -59,7 +59,7 @@ export class UploadExamStudentsCommandHandler
     this.excelPort.validateNumberOfRows(rows, 2000);
     this.excelPort.validateHeaders(
       this.headers,
-      Object.keys(rows[0] || {}).filter((e) => this.headers.includes(e)),
+      Object.keys(rows[0] || {}),
     );
     this.excelPort.validateValuesByColumn(rows, 'CODE');
     this.excelPort.validateValuesByColumn(rows, 'FULL_NAME');
