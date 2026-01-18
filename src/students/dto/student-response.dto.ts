@@ -21,4 +21,17 @@ export class StudentResponseDto {
 
   @ApiProperty({ example: '2025-12-01T10:00:00.000Z' })
   updatedAt: string;
+
+  // Attempt Details (Optional, only present when querying within an exam context)
+  @ApiPropertyOptional({ example: 'completed' })
+  attemptStatus?: string;
+
+  @ApiPropertyOptional({ example: 18.5 })
+  score?: number;
+
+  @ApiPropertyOptional({ example: 18.2 })
+  clientScore?: number;
+
+  @ApiPropertyOptional({ example: 'https://minio...' })
+  imageUrl?: string;
 }

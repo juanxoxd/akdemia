@@ -8,8 +8,9 @@ import { BulkCreateStudentsDto } from './dto/bulk-create-students.dto';
 import { StudentResponseDto } from './dto/student-response.dto';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { SearchStudentDto } from './dto/search-student.dto';
-import { HTTP_MESSAGES, StudentStatus, ProcessingStatus } from '@omr/shared-types';
+import { HTTP_MESSAGES, StudentStatus, ProcessingStatus, MINIO_CONSTANTS } from '@omr/shared-types';
 import { StudentMapper } from './mappers/student.mapper';
+import { S3Service } from '../infrastructure/storage/s3.service';
 
 @Injectable()
 export class StudentsService {
@@ -23,6 +24,7 @@ export class StudentsService {
     @InjectRepository(Exam)
     private readonly examRepository: Repository<Exam>,
     private readonly dataSource: DataSource,
+    private readonly s3Service: S3Service,
   ) {}
 
   async registerStudent(
@@ -210,7 +212,28 @@ export class StudentsService {
       throw new NotFoundException(HTTP_MESSAGES.NOT_FOUND);
     }
 
-    return StudentMapper.toPresentation(StudentMapper.toDomain(attempt.student));
+    const dto = StudentMapper.toPresentation(StudentMapper.toDomain(attempt.student));
+
+    // Enrich with attempt details
+    dto.attemptStatus = attempt.status;
+    dto.score = attempt.score;
+    dto.clientScore = attempt.clientScore;
+
+    if (attempt.imageUrl) {
+        try {
+             // Reuse URL signing logic
+             let key = attempt.imageUrl;
+             const bucketUrlPart = `${MINIO_CONSTANTS.DEFAULT_BUCKET}/`;
+             if (key.includes(bucketUrlPart)) {
+               key = key.split(bucketUrlPart)[1];
+             }
+             dto.imageUrl = await this.s3Service.getPresignedUrl(key);
+        } catch (e: any) {
+            this.logger.warn(`Could not sign URL for attempt ${attempt.id}: ${e.message}`);
+        }
+    }
+
+    return dto;
   }
 
   async update(
