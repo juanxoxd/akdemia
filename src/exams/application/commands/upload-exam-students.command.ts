@@ -1,4 +1,4 @@
-import { Inject, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Exam } from '../../../database/entities/exam.entity';
@@ -56,10 +56,14 @@ export class UploadExamStudentsCommandHandler
     );
 
     // 2. Initial Validations
+    if (rows.length === 0) {
+      throw new BadRequestException('Excel file is empty or contains no data rows');
+    }
+
     this.excelPort.validateNumberOfRows(rows, 2000);
     this.excelPort.validateHeaders(
       this.headers,
-      Object.keys(rows[0] || {}),
+      Object.keys(rows[0]),
     );
     this.excelPort.validateValuesByColumn(rows, 'CODE');
     this.excelPort.validateValuesByColumn(rows, 'FULL_NAME');
